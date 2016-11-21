@@ -29,10 +29,10 @@ class MVTBinaryExport(ScriptedLoadableModule):
 """ # replace with organization, grant and thanks.
 
 #
-# MVTBinaryExport_exportWidget
+# MVTBinaryExportWidget
 #
 
-class MVTBinaryExport_exportWidget(ScriptedLoadableModuleWidget):
+class MVTBinaryExportWidget(ScriptedLoadableModuleWidget):
   """Uses ScriptedLoadableModuleWidget base class, available at:
   https://github.com/Slicer/Slicer/blob/master/Base/Python/slicer/ScriptedLoadableModule.py
   """
@@ -125,14 +125,14 @@ class MVTBinaryExport_exportWidget(ScriptedLoadableModuleWidget):
     self.onLabelSelect()
 
   def onApplyButton(self):
-    logic = MVTBinaryExport_exportLogic()
+    logic = MVTBinaryExportLogic()
     logic.run(self.inputSelector.currentNode(), self.inputLabelSelector.currentNode(), self.fname.text, self.progbar)
 
 #
-# MVTBinaryExport_exportLogic
+# MVTBinaryExportLogic
 #
 
-class MVTBinaryExport_exportLogic(ScriptedLoadableModuleLogic):
+class MVTBinaryExportLogic(ScriptedLoadableModuleLogic):
   """This class should implement all the actual
   computation done by your module.  The interface
   should be such that other python code can import
@@ -237,7 +237,7 @@ class MVTBinaryExport_exportLogic(ScriptedLoadableModuleLogic):
     return True
 
 
-class MVTBinaryExport_exportTest(ScriptedLoadableModuleTest):
+class MVTBinaryExportTest(ScriptedLoadableModuleTest):
   """
   This is the test case for your scripted module.
   Uses ScriptedLoadableModuleTest base class, available at:
@@ -253,9 +253,9 @@ class MVTBinaryExport_exportTest(ScriptedLoadableModuleTest):
     """Run as few or as many tests as needed here.
     """
     self.setUp()
-    self.test_pig_dyn_export1()
+    self.test_MVTBinaryExport1()
 
-  def test_pig_dyn_export1(self):
+  def test_MVTBinaryExport1(self):
     """ Ideally you should have several levels of tests.  At the lowest level
     tests should exercise the functionality of the logic with different inputs
     (both valid and invalid).  At higher levels your tests should emulate the
@@ -287,6 +287,6 @@ class MVTBinaryExport_exportTest(ScriptedLoadableModuleTest):
     self.delayDisplay('Finished with download and loading')
 
     volumeNode = slicer.util.getNode(pattern="FA")
-    logic = pig_dyn_exportLogic()
+    logic = MVTBinaryExportLogic()
     self.assertTrue( logic.hasImageData(volumeNode) )
     self.delayDisplay('Test passed!')
