@@ -82,6 +82,7 @@ class MVTConvertWidget(ScriptedLoadableModuleWidget):
     self.ovol.addEnabled = True
     self.ovol.removeEnabled = False
     self.ovol.noneEnabled = False
+    self.ovol.renameEnabled = True
     self.ovol.showHidden = False
     self.ovol.showChildNodeTypes = False
     self.ovol.setMRMLScene( slicer.mrmlScene )
