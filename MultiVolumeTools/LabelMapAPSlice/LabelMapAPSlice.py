@@ -20,16 +20,7 @@ class LabelMapAPSlice(ScriptedLoadableModule):
     self.parent.dependencies = []
     self.parent.contributors = ["John Cronin (KCL)"] # replace with "Firstname Lastname (Organization)"
     self.parent.helpText = """
-    Splits the individual frames of a single-slice 
-    MultiVolume to a multi-slice Volume to allow easier 
-    editing.  Optionally adds padding at the start and end, 
-    and allows sub-sampling of only certain frames within 
-    the MultiVolume.  For example, Start frame = 2, 
-    Number of frames = 3, Frame Interval = 4, ZSlices = 5, 
-    Pad = True would generate an output of: BLANK, 2, 2, 2, 
-    2, 2, 6, 6, 6, 6, 6, 10, 10, 10, 10, 10, BLANK. 
-    Optionally creates a ready-to-go LabelMap for the 
-    output volume.    
+    Divides a label map into anterior-posterior slices  
     """
     self.parent.acknowledgementText = """
     By John Cronin.
