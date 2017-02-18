@@ -279,7 +279,7 @@ class MVTConvertLogic(ScriptedLoadableModuleLogic):
     volumeNode.SetSpacing(imageSpacing)
     volumeNode.SetImageDataConnection(thresholder.GetOutputPort())
     # Add volume to scene
-    slicer.mrmlScene.AddNode(volumeNode)
+    #slicer.mrmlScene.AddNode(volumeNode)
     displayNode=slicer.vtkMRMLScalarVolumeDisplayNode()
     slicer.mrmlScene.AddNode(displayNode)
     colorNode = slicer.util.getNode('Grey')
