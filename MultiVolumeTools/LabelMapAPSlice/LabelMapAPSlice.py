@@ -299,6 +299,8 @@ class LabelMapAPSliceLogic(ScriptedLoadableModuleLogic):
                   #logging.info('Set zone %d' % zone + 1)
               #    break
       
+      imageData.Modified()
+      imageData.GetPointData().GetScalars().Modified()
       volumeNode.Modified()
       logging.info('Processed frame %d' % z)
 	  
