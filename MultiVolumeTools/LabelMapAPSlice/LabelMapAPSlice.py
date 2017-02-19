@@ -209,11 +209,17 @@ class LabelMapAPSliceLogic(ScriptedLoadableModuleLogic):
     """
 
     logging.info('Processing started')
-
-    a = slicer.util.array(input_vol.GetName())
-    max_z = len(a)
-    max_y = len(a[0])
-    max_x = len(a[0][0])
+    
+    import vtk.util.numpy_support
+    input_im = input_vol.GetImageData()
+    input_shape = list(input_im.GetDimensions())
+    input_shape.reverse()
+    a = vtk.util.numpy_support.vtk_to_numpy(input_im.GetPointData().GetScalars()).reshape(input_shape)
+    
+    #a = slicer.util.array(input_vol.GetName())
+    max_z = input_shape[0]
+    max_y = input_shape[1]
+    max_x = input_shape[2]
 
     vl = slicer.modules.volumes.logic()
 	
@@ -228,31 +234,13 @@ class LabelMapAPSliceLogic(ScriptedLoadableModuleLogic):
     voxelType=input_vol.GetImageData().GetScalarType()
     # Create an empty image volume
     imageData=vtk.vtkImageData()
-    imageData.DeepCopy(input_vol.GetImageData())
-    thresholder=vtk.vtkImageThreshold()
-    thresholder.SetInputData(imageData)
-    thresholder.SetInValue(0)
-    thresholder.SetOutValue(0)
-    # Create volume node
-    volumeNode = output_vol
-    volumeNode.SetSpacing(imageSpacing)
-    volumeNode.SetOrigin(input_vol.GetOrigin())
-    vm = vtk.vtkMatrix4x4()
-    input_vol.GetIJKToRASDirectionMatrix(vm)
-    volumeNode.SetIJKToRASDirectionMatrix(vm)
-    volumeNode.SetImageDataConnection(thresholder.GetOutputPort())
-    # Add volume to scene
-    displayNode=slicer.vtkMRMLScalarVolumeDisplayNode()
-    slicer.mrmlScene.AddNode(displayNode)
-    colorNode = slicer.util.getNode('GenericAnatomyColors')
-    displayNode.SetAndObserveColorNodeID(colorNode.GetID())
-    volumeNode.SetAndObserveDisplayNodeID(displayNode.GetID())
-    volumeNode.CreateDefaultStorageNode()
-    #displayNode.AutoWindowLevelOff()
-    #displayNode.SetWindow(200)
-    #displayNode.SetLevel(0)
-    #displayNode.SetInterpolate(0)
-    da = slicer.util.array(volumeNode.GetID())
+    #imageData.DeepCopy(input_vol.GetImageData())
+    imageData.SetDimensions(max_x, max_y, max_z)
+    imageData.AllocateScalars(vtk.VTK_SHORT, 1)
+
+    output_scalars = imageData.GetPointData().GetScalars()
+    da = vtk.util.numpy_support.vtk_to_numpy(output_scalars).reshape(input_shape)
+    #da = slicer.util.array(volumeNode.GetID())
        
     for z in xrange(0, max_z):
       # first decide on the first and last set lines
@@ -276,32 +264,52 @@ class LabelMapAPSliceLogic(ScriptedLoadableModuleLogic):
         zone_starts = []
         zone_ends = []
         
-        for zone in xrange(0, slices):
-          zs = (last_set - first_set) * zone / slices + first_set
-          ze = (last_set - first_set) * (zone + 1) / slices + first_set
-          zone_starts.append(zs)
-          zone_ends.append(ze)
-          logging.info('Zone %d to %d' % (zs, ze))
+        if(equal_sizes):
+          prev_zone = 0
+          cur_pt = -1
+          cur_start = first_set
+          for y in xrange(first_set, last_set + 1):
+            for x in xrange(0, max_x):
+              cp = a[z][y][x]
+              if cp != 0:
+                cur_pt = cur_pt + 1
+                cur_zone = cur_pt * slices / set_count
+                if cur_zone != prev_zone:
+                  zs = cur_start
+                  ze = y
+                  zone_starts.append(zs)
+                  zone_ends.append(ze)
+                  cur_start = y
+                  prev_zone = cur_zone
+          zone_starts.append(cur_start)
+          zone_ends.append(last_set + 1)
+        else:
+          for zone in xrange(0, slices):
+            zs = (last_set - first_set) * zone / slices + first_set
+            ze = (last_set - first_set) * (zone + 1) / slices + first_set
+            zone_starts.append(zs)
+            zone_ends.append(ze)
+            logging.info('Zone %d to %d' % (zs, ze))
           
         # copy data
         logging.info('Processing frame')
         for y in xrange(first_set, last_set + 1):
           for x in xrange(0, max_x):
             cp = a[z][y][x]
+            da[z][y][x] = 0
             if(cp != 0):
-              z2 = (y - first_set) * slices / (last_set - first_set)
-              if((z2 >= 0) & (z2 < slices)):
-                da[z][y][x] = z2 + 1
-              #for z2 in xrange(0, slices):
+              #z2 = (y - first_set) * slices / (last_set - first_set)
+              #if((z2 >= 0) & (z2 < slices)):
+              #  da[z][y][x] = z2 + 1
+              for z2 in xrange(0, slices):
                 
-              #  if(y >= zone_starts[z2] & y < zone_ends[z2]):
-              #    da[z][y][x] = z2 + 1
-                  #logging.info('Set zone %d' % zone + 1)
-              #    break
+                if((y >= zone_starts[z2]) & (y < zone_ends[z2])):
+                  da[z][y][x] = z2 + 1
+                  break
       
-      imageData.Modified()
-      imageData.GetPointData().GetScalars().Modified()
-      volumeNode.Modified()
+      #imageData.Modified()
+      #imageData.GetPointData().GetScalars().Modified()
+      #volumeNode.Modified()
       logging.info('Processed frame %d' % z)
 	  
       if pb is None:
@@ -310,7 +318,34 @@ class LabelMapAPSliceLogic(ScriptedLoadableModuleLogic):
         pb.setValue((z + 1) * 100 / max_z)
         slicer.app.processEvents()
         
-    logging.info('Processing completed')
+    imageData.Modified()
+    output_scalars.Modified()
+    
+    thresholder=vtk.vtkImageThreshold()
+    thresholder.SetInputData(imageData)
+    #thresholder.SetInValue(0)
+    #thresholder.SetOutValue(0)
+    # Create volume node
+    volumeNode = output_vol
+    volumeNode.SetSpacing(imageSpacing)
+    volumeNode.SetOrigin(input_vol.GetOrigin())
+    vm = vtk.vtkMatrix4x4()
+    input_vol.GetIJKToRASDirectionMatrix(vm)
+    volumeNode.SetIJKToRASDirectionMatrix(vm)
+    volumeNode.SetImageDataConnection(thresholder.GetOutputPort())
+    # Add volume to scene
+    displayNode=slicer.vtkMRMLScalarVolumeDisplayNode()
+    slicer.mrmlScene.AddNode(displayNode)
+    colorNode = slicer.util.getNode('GenericAnatomyColors')
+    displayNode.SetAndObserveColorNodeID(colorNode.GetID())
+    volumeNode.SetAndObserveDisplayNodeID(displayNode.GetID())
+    volumeNode.CreateDefaultStorageNode()
+    displayNode.AutoWindowLevelOff()
+    displayNode.SetWindow(float(slices))
+    displayNode.SetLevel(float(slices + 1) / 2.0)
+    displayNode.SetInterpolate(0)
+    
+    logging.info('Processing completed %d %d' % (imageData.GetScalarRange()[0], imageData.GetScalarRange()[1]))
 
     return True
 
