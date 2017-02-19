@@ -278,6 +278,10 @@ class MVTConvertLogic(ScriptedLoadableModuleLogic):
     #vname = output_vol;
     #volumeNode.SetName(vname)
     volumeNode.SetSpacing(imageSpacing)
+    volumeNode.SetOrigin(input_vol.GetOrigin())
+    vm = vtk.vtkMatrix4x4()
+    input_vol.GetIJKToRASDirectionMatrix(vm)
+    volumeNode.SetIJKToRASDirectionMatrix(vm)
     volumeNode.SetImageDataConnection(thresholder.GetOutputPort())
     # Add volume to scene
     #slicer.mrmlScene.AddNode(volumeNode)
@@ -301,7 +305,7 @@ class MVTConvertLogic(ScriptedLoadableModuleLogic):
       for z in xrange(0, zslices):
         for y in xrange(0, max_y):
           for x in xrange(0, max_x):
-            da[z + fid * zslices + offset_frame][max_y - y - 1][max_x - x - 1] = a[0][y][x][sframe + fid * finterval]
+            da[z + fid * zslices + offset_frame][y][x] = a[0][y][x][sframe + fid * finterval]
       
       logging.info('Processed frame %d' % fid)
 	  
