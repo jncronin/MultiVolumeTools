@@ -83,10 +83,18 @@ class LabelStatisticsPerSliceWidget(ScriptedLoadableModuleWidget):
     #
     # Apply Button
     #
-    self.applyButton = qt.QPushButton("Run")
+    self.applyButton = qt.QPushButton("Add to output")
     self.applyButton.toolTip = "Run the algorithm."
     self.applyButton.enabled = False
     parametersFormLayout.addRow(self.applyButton)
+    
+    #
+    # Clear output button
+    #
+    self.clearButton = qt.QPushButton("Clear Output")
+    self.clearButton.toolTip = "Clear output table"
+    self.clearButton.enabled = True
+    parametersFormLayout.addRow(self.clearButton)
     	
     #
     # Progress Bar
@@ -95,13 +103,8 @@ class LabelStatisticsPerSliceWidget(ScriptedLoadableModuleWidget):
     self.progbar.setValue(0);
     parametersFormLayout.addRow(self.progbar);
 
-    # connections
-    self.applyButton.connect('clicked(bool)', self.onApplyButton)
-    self.inputSelector.connect("currentNodeChanged(vtkMRMLNode*)", self.onSelect)
-    self.lmap.connect("currentNodeChanged(vtkMRMLNode*)", self.onSelect)
-
     # Add vertical spacer
-    self.layout.addStretch(1)
+    #self.layout.addStretch(1)
     
     #
     # Output Area
@@ -116,7 +119,23 @@ class LabelStatisticsPerSliceWidget(ScriptedLoadableModuleWidget):
     # Output table
     self.tw = qt.QTableWidget()
     outputFormLayout.addRow(self.tw)
+    
+    #
+    # Save output button
+    #
+    self.saveButton = qt.QPushButton("Save Output As")
+    self.saveButton.toolTip = "Save output table"
+    self.saveButton.enabled = True
+    outputFormLayout.addRow(self.saveButton)
 
+    
+    # connections
+    self.applyButton.connect('clicked(bool)', self.onApplyButton)
+    self.clearButton.connect('clicked(bool)', self.onClearButton)
+    self.saveButton.connect('clicked(bool)', self.onSaveButton)
+    self.inputSelector.connect("currentNodeChanged(vtkMRMLNode*)", self.onSelect)
+    self.lmap.connect("currentNodeChanged(vtkMRMLNode*)", self.onSelect)
+    
     # Refresh Apply button state
     self.onSelect()
 
@@ -129,6 +148,43 @@ class LabelStatisticsPerSliceWidget(ScriptedLoadableModuleWidget):
   def onApplyButton(self):
     logic = LabelStatisticsPerSliceLogic()
     logic.run(self.inputSelector.currentNode(), self.lmap.currentNode(), self.progbar, self.tw)
+    
+  def onClearButton(self):
+    self.tw.setRowCount(0)
+    self.tw.setColumnCount(0)
+    
+  def onSaveButton(self):
+    # file picker
+    qfd = qt.QFileDialog()
+    qfd.windowTitle = 'Save Output As'
+    qfd.modal = True
+    qfd.setFilter('Comma-separated values (*.csv)')
+    qfd.acceptMode = qt.QFileDialog.AcceptSave
+    qfd.fileMode = qt.QFileDialog.AnyFile
+    qfd.defaultSuffix = 'csv'
+    
+    if qfd.exec_() == qt.QFileDialog.AcceptSave:
+      fname = qfd.selectedFiles()[0]
+      # saving logic
+      tw = self.tw
+      f = open(fname, 'w')
+      
+      for x in xrange(0, tw.columnCount):
+        if x != 0:
+          f.write(',')
+        f.write(tw.horizontalHeaderItem(x).text())
+      f.write('\n')
+      
+      for y in xrange(0, tw.rowCount):
+        for x in xrange(0, tw.columnCount):
+          if x != 0:
+            f.write(',')
+          twi = tw.item(y,x)
+          if twi is not None:
+            f.write(tw.item(y,x).text())
+        f.write('\n')
+      
+      f.close()
     
 #
 # pig_dynLogic
@@ -229,12 +285,16 @@ class LabelStatisticsPerSliceLogic(ScriptedLoadableModuleLogic):
 
     counts = []
     means = []
+    vols = []
     zones = int(lm_im.GetScalarRange()[1])
     print('%d zones' % zones)
     
     max_z = input_shape[0]
     max_y = input_shape[1]
     max_x = input_shape[2]
+    
+    spacing = input_vol.GetSpacing()
+    voxel_size = spacing[0] * spacing[1] * spacing[2]
 
     if pb is None:
       pass
@@ -259,9 +319,11 @@ class LabelStatisticsPerSliceLogic(ScriptedLoadableModuleLogic):
           cur_means.append(0)
         else:
           cur_means.append(cur_total[t] / cur_counts[t])      
+      cur_vols = [x * voxel_size / 1000.0 for x in cur_counts]
       
       counts.append(cur_counts)
       means.append(cur_means)
+      vols.append(cur_vols)
                
       logging.info('Processed frame %d' % z)
 	  
@@ -278,22 +340,36 @@ class LabelStatisticsPerSliceLogic(ScriptedLoadableModuleLogic):
     
     if (tw is not None):
       # print in tabular form
-      tw.setColumnCount(zones * 2)
-      tw.setRowCount(max_z)
       
-      headers = []
-      for zone in xrange(0, zones):
-        headers.append('z%d_count' % zone)
-        headers.append('z%d_mean' % zone)
-      tw.setHorizontalHeaderLabels(headers)
+      cur_row = tw.rowCount
+      cur_col = tw.columnCount
+      new_col = zones * 3 + 2
+      
+      if(new_col > cur_col):
+        tw.setColumnCount(new_col)
+        headers = []
+        headers.append('input_vol')
+        headers.append('label_map')
+        for zone in xrange(0, zones):
+          headers.append('z%d_count' % zone)
+          headers.append('z%d_vol' % zone)
+          headers.append('z%d_mean' % zone)
+        tw.setHorizontalHeaderLabels(headers)
+      
+      tw.setRowCount(max_z + cur_row)      
       
       for z in xrange(0, max_z):
+        twiv = qt.QTableWidgetItem(input_vol.GetName())
+        twlm = qt.QTableWidgetItem(lmap.GetName())
+        tw.setItem(z + cur_row, 0, twiv)
+        tw.setItem(z + cur_row, 1, twlm)
         for zone in xrange(0, zones):
           twic = qt.QTableWidgetItem('%d' % counts[z][zone])
+          twivol = qt.QTableWidgetItem('%.3g' % vols[z][zone])
           twim = qt.QTableWidgetItem('%d' % means[z][zone])
-          tw.setItem(z, zone * 2, twic)
-          tw.setItem(z, zone * 2 + 1, twim)
-      
+          tw.setItem(z + cur_row, zone * 3 + 2, twic)
+          tw.setItem(z + cur_row, zone * 3 + 3, twivol)
+          tw.setItem(z + cur_row, zone * 3 + 4, twim)
 
     return True
 
