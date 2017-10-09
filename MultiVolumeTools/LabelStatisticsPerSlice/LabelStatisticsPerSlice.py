@@ -318,7 +318,7 @@ class LabelStatisticsPerSliceLogic(ScriptedLoadableModuleLogic):
         if cur_counts[t] == 0:
           cur_means.append(0)
         else:
-          cur_means.append(cur_total[t] / cur_counts[t])      
+          cur_means.append(float(cur_total[t]) / cur_counts[t])      
       cur_vols = [x * voxel_size / 1000.0 for x in cur_counts]
       
       counts.append(cur_counts)
@@ -366,7 +366,7 @@ class LabelStatisticsPerSliceLogic(ScriptedLoadableModuleLogic):
         for zone in xrange(0, zones):
           twic = qt.QTableWidgetItem('%d' % counts[z][zone])
           twivol = qt.QTableWidgetItem('%.3g' % vols[z][zone])
-          twim = qt.QTableWidgetItem('%d' % means[z][zone])
+          twim = qt.QTableWidgetItem('%.3g' % means[z][zone])
           tw.setItem(z + cur_row, zone * 3 + 2, twic)
           tw.setItem(z + cur_row, zone * 3 + 3, twivol)
           tw.setItem(z + cur_row, zone * 3 + 4, twim)
