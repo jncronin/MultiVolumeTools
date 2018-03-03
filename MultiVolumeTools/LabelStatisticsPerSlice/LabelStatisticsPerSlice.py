@@ -3,6 +3,7 @@ import unittest
 import vtk, qt, ctk, slicer
 from slicer.ScriptedLoadableModule import *
 import logging
+import numpy
 
 #
 # LabelStatisticsPerSlice
@@ -286,6 +287,7 @@ class LabelStatisticsPerSliceLogic(ScriptedLoadableModuleLogic):
     counts = []
     means = []
     vols = []
+    sds = []
     zones = int(lm_im.GetScalarRange()[1])
     print('%d zones' % zones)
     
@@ -303,27 +305,30 @@ class LabelStatisticsPerSliceLogic(ScriptedLoadableModuleLogic):
       slicer.app.processEvents()
                
     for z in xrange(0, max_z):
-      cur_counts = [0] * zones
-      cur_total = [0] * zones
-      for y in xrange(0, max_y):
-        for x in xrange(0, max_x):
-          cz = b[z][y][x]
-          if(cz != 0):
-            cp = a[z][y][x]
-            cur_counts[cz - 1] = cur_counts[cz - 1] + 1
-            cur_total[cz - 1] = cur_total[cz - 1] + cp
-      
+      cur_counts = []
       cur_means = []
-      for t in xrange(0, zones):
-        if cur_counts[t] == 0:
-          cur_means.append(0)
+      cur_sd = []
+      
+      vz = a[z]
+      lz = b[z]
+      
+      for t in xrange(1, zones+1):
+        vzone = vz[lz == t]
+        cur_counts.append(len(vzone))
+        
+        if(len(vzone) > 0):
+          cur_means.append(numpy.mean(vzone))
+          cur_sd.append(numpy.std(vzone))
         else:
-          cur_means.append(float(cur_total[t]) / cur_counts[t])      
+          cur_means.append(0)
+          cur_sd.append(0)
+      
       cur_vols = [x * voxel_size / 1000.0 for x in cur_counts]
       
       counts.append(cur_counts)
       means.append(cur_means)
       vols.append(cur_vols)
+      sds.append(cur_sd)
                
       logging.info('Processed frame %d' % z)
 	  
@@ -343,7 +348,7 @@ class LabelStatisticsPerSliceLogic(ScriptedLoadableModuleLogic):
       
       cur_row = tw.rowCount
       cur_col = tw.columnCount
-      new_col = zones * 3 + 2
+      new_col = zones * 4 + 2
       
       if(new_col > cur_col):
         tw.setColumnCount(new_col)
@@ -354,6 +359,7 @@ class LabelStatisticsPerSliceLogic(ScriptedLoadableModuleLogic):
           headers.append('z%d_count' % zone)
           headers.append('z%d_vol' % zone)
           headers.append('z%d_mean' % zone)
+          headers.append('z%d_sd' % zone)
         tw.setHorizontalHeaderLabels(headers)
       
       tw.setRowCount(max_z + cur_row)      
@@ -367,9 +373,11 @@ class LabelStatisticsPerSliceLogic(ScriptedLoadableModuleLogic):
           twic = qt.QTableWidgetItem('%d' % counts[z][zone])
           twivol = qt.QTableWidgetItem('%.3g' % vols[z][zone])
           twim = qt.QTableWidgetItem('%.3g' % means[z][zone])
-          tw.setItem(z + cur_row, zone * 3 + 2, twic)
-          tw.setItem(z + cur_row, zone * 3 + 3, twivol)
-          tw.setItem(z + cur_row, zone * 3 + 4, twim)
+          twisd = qt.QTableWidgetItem('%.3g' % sds[z][zone])
+          tw.setItem(z + cur_row, zone * 4 + 2, twic)
+          tw.setItem(z + cur_row, zone * 4 + 3, twivol)
+          tw.setItem(z + cur_row, zone * 4 + 4, twim)
+          tw.setItem(z + cur_row, zone * 4 + 5, twisd)
 
     return True
 
