@@ -288,6 +288,9 @@ class LabelStatisticsPerSliceLogic(ScriptedLoadableModuleLogic):
     means = []
     vols = []
     sds = []
+    Rs = []
+    As = []
+    Ss = []
     zones = int(lm_im.GetScalarRange()[1])
     print('%d zones' % zones)
     
@@ -297,6 +300,11 @@ class LabelStatisticsPerSliceLogic(ScriptedLoadableModuleLogic):
     
     spacing = input_vol.GetSpacing()
     voxel_size = spacing[0] * spacing[1] * spacing[2]
+
+    ras_matrix = vtk.vtkMatrix4x4()
+    input_vol.GetRASToIJKMatrix(ras_matrix)
+    ijk_matrix = vtk.vtkMatrix4x4()
+    vtk.vtkMatrix4x4.Invert(ras_matrix, ijk_matrix)
 
     if pb is None:
       pass
@@ -329,6 +337,15 @@ class LabelStatisticsPerSliceLogic(ScriptedLoadableModuleLogic):
       means.append(cur_means)
       vols.append(cur_vols)
       sds.append(cur_sd)
+
+      # Generate RAS coordinates
+      pin = [ max_x / 2, max_y / 2, z, 1.0 ]
+      pout = [ 0.0, 0.0, 0.0, 0.0 ]
+      ijk_matrix.MultiplyPoint(pin, pout)
+
+      Rs.append(pout[0])
+      As.append(pout[1])
+      Ss.append(pout[2])
                
       logging.info('Processed frame %d' % z)
 	  
@@ -348,7 +365,7 @@ class LabelStatisticsPerSliceLogic(ScriptedLoadableModuleLogic):
       
       cur_row = tw.rowCount
       cur_col = tw.columnCount
-      new_col = zones * 4 + 2
+      new_col = zones * 4 + 2 + 3
       
       if(new_col > cur_col):
         tw.setColumnCount(new_col)
@@ -360,6 +377,9 @@ class LabelStatisticsPerSliceLogic(ScriptedLoadableModuleLogic):
           headers.append('z%d_vol' % zone)
           headers.append('z%d_mean' % zone)
           headers.append('z%d_sd' % zone)
+        headers.append('R')
+        headers.append('A')
+        headers.append('S')
         tw.setHorizontalHeaderLabels(headers)
       
       tw.setRowCount(max_z + cur_row)      
@@ -378,6 +398,9 @@ class LabelStatisticsPerSliceLogic(ScriptedLoadableModuleLogic):
           tw.setItem(z + cur_row, zone * 4 + 3, twivol)
           tw.setItem(z + cur_row, zone * 4 + 4, twim)
           tw.setItem(z + cur_row, zone * 4 + 5, twisd)
+        tw.setItem(z + cur_row, zones * 4 + 2, qt.QTableWidgetItem('%.3g' % Rs[z]))
+        tw.setItem(z + cur_row, zones * 4 + 3, qt.QTableWidgetItem('%.3g' % As[z]))
+        tw.setItem(z + cur_row, zones * 4 + 4, qt.QTableWidgetItem('%.3g' % Ss[z]))
 
     return True
 
