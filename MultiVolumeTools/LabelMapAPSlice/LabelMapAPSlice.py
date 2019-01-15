@@ -88,7 +88,11 @@ class LabelMapAPSliceWidget(ScriptedLoadableModuleWidget):
     self.equal_sizes = qt.QCheckBox()
     self.equal_sizes.setChecked(False)
     parametersFormLayout.addRow("Make slices equal areas: ", self.equal_sizes)
-       
+
+    self.whole_vol = qt.QCheckBox()
+    self.whole_vol.setChecked(False)
+    parametersFormLayout.addRow("Base zones upon whole volume: ", self.whole_vol)
+ 
     #
     # Apply Button
     #
@@ -124,7 +128,7 @@ class LabelMapAPSliceWidget(ScriptedLoadableModuleWidget):
 
   def onApplyButton(self):
     logic = LabelMapAPSliceLogic()
-    logic.run(self.inputSelector.currentNode(), self.ovol.currentNode(), int(self.slices.text), self.equal_sizes.isChecked(), self.progbar)
+    logic.run(self.inputSelector.currentNode(), self.ovol.currentNode(), int(self.slices.text), self.equal_sizes.isChecked(), self.whole_vol.isChecked(), self.progbar)
 
 #
 # pig_dynLogic
@@ -204,7 +208,7 @@ class LabelMapAPSliceLogic(ScriptedLoadableModuleLogic):
     annotationLogic = slicer.modules.annotations.logic()
     annotationLogic.CreateSnapShot(name, description, type, 1, imageData) 
 
-  def run(self, input_vol, output_vol, slices, equal_sizes, pb = None):
+  def run(self, input_vol, output_vol, slices, equal_sizes = False, whole_vol = False, pb = None):
     """
     Run the actual algorithm
     """
@@ -242,74 +246,112 @@ class LabelMapAPSliceLogic(ScriptedLoadableModuleLogic):
     output_scalars = imageData.GetPointData().GetScalars()
     da = vtk.util.numpy_support.vtk_to_numpy(output_scalars).reshape(input_shape)
     #da = slicer.util.array(volumeNode.GetID())
-       
-    for z in xrange(0, max_z):
-      # first decide on the first and last set lines
-      first_set = max_y
-      last_set = 0
-      set_count = 0
 
-      aset = np.where(a[z] > 0)[0]
+    if whole_vol == True:
+      # calculate set lines for whole volume
+      aset = np.where(a > 0)[1]
       set_count = len(aset)
       if(set_count > 0):
         first_set = min(aset)
         last_set = max(aset)
-            
-      logging.info('First set %d last set %d' % (first_set, last_set))
-      
+
       if(set_count > 0):
         # decide on the threshold lines
         zone_starts = []
         zone_ends = []
         
-        if(equal_sizes):
-          prev_zone = 0
-          cur_pt = -1
-          cur_start = first_set
-          for y in xrange(first_set, last_set + 1):
-            for x in xrange(0, max_x):
-              cp = a[z][y][x]
-              if cp != 0:
-                cur_pt = cur_pt + 1
-                cur_zone = cur_pt * slices / set_count
-                if cur_zone != prev_zone:
-                  zs = cur_start
-                  ze = y
-                  zone_starts.append(zs)
-                  zone_ends.append(ze)
-                  cur_start = y
-                  prev_zone = cur_zone
-          zone_starts.append(cur_start)
-          zone_ends.append(last_set + 1)
-        else:
-          for zone in xrange(0, slices):
-            zs = (last_set - first_set) * zone / slices + first_set
-            ze = (last_set - first_set) * (zone + 1) / slices + first_set
-            zone_starts.append(zs)
-            zone_ends.append(ze)
-            logging.info('Zone %d to %d' % (zs, ze))
-          
+        # TODO: handle equal size for whole volume
+        for zone in xrange(0, slices):
+          zs = (last_set - first_set) * zone / slices + first_set
+          ze = (last_set - first_set) * (zone + 1) / slices + first_set
+          zone_starts.append(zs)
+          zone_ends.append(ze)
+          logging.info('Zone %d to %d' % (zs, ze))
+        
         # copy data
         logging.info('Processing frame')
-        input_z = a[z]
-        input_mask = np.zeros_like(input_z)
+        input_mask = np.zeros_like(a)
 
         for zone in xrange(0, slices):
-          input_mask[xrange(zone_starts[zone], zone_ends[zone])] = zone + 1
+          input_mask[:,xrange(zone_starts[zone], zone_ends[zone]),:] = zone + 1
         
-        input_mask[np.where(input_z == 0)] = 0
-        da[z] = input_mask
+        input_mask[np.where(a == 0)] = 0
+        da[:,:,:] = input_mask
+
+        if pb is None:
+          pass
+        else:
+          pb.setValue(100)
+          slicer.app.processEvents()
+
+    else:
+      for z in xrange(0, max_z):
+        # first decide on the first and last set lines
+        first_set = max_y
+        last_set = 0
+        set_count = 0
+
+        aset = np.where(a[z] > 0)[0]
+        set_count = len(aset)
+        if(set_count > 0):
+          first_set = min(aset)
+          last_set = max(aset)
+              
+        logging.info('First set %d last set %d' % (first_set, last_set))
+        
+        if(set_count > 0):
+          # decide on the threshold lines
+          zone_starts = []
+          zone_ends = []
+          
+          if(equal_sizes):
+            prev_zone = 0
+            cur_pt = -1
+            cur_start = first_set
+            for y in xrange(first_set, last_set + 1):
+              for x in xrange(0, max_x):
+                cp = a[z][y][x]
+                if cp != 0:
+                  cur_pt = cur_pt + 1
+                  cur_zone = cur_pt * slices / set_count
+                  if cur_zone != prev_zone:
+                    zs = cur_start
+                    ze = y
+                    zone_starts.append(zs)
+                    zone_ends.append(ze)
+                    cur_start = y
+                    prev_zone = cur_zone
+            zone_starts.append(cur_start)
+            zone_ends.append(last_set + 1)
+          else:
+            for zone in xrange(0, slices):
+              zs = (last_set - first_set) * zone / slices + first_set
+              ze = (last_set - first_set) * (zone + 1) / slices + first_set
+              zone_starts.append(zs)
+              zone_ends.append(ze)
+              logging.info('Zone %d to %d' % (zs, ze))
+            
+          # copy data
+          logging.info('Processing frame')
+          input_z = a[z]
+          input_mask = np.zeros_like(input_z)
+
+          for zone in xrange(0, slices):
+            input_mask[xrange(zone_starts[zone], zone_ends[zone])] = zone + 1
+          
+          input_mask[np.where(input_z == 0)] = 0
+          da[z] = input_mask
+        
+        #imageData.Modified()
+        #imageData.GetPointData().GetScalars().Modified()
+        #volumeNode.Modified()
+        logging.info('Processed frame %d' % z)
       
-      #imageData.Modified()
-      #imageData.GetPointData().GetScalars().Modified()
-      #volumeNode.Modified()
-      logging.info('Processed frame %d' % z)
-	  
-      if pb is None:
-        pass
-      else:
-        pb.setValue((z + 1) * 100 / max_z)
-        slicer.app.processEvents()
+        if pb is None:
+          pass
+        else:
+          pb.setValue((z + 1) * 100 / max_z)
+          slicer.app.processEvents()
         
     imageData.Modified()
     output_scalars.Modified()
