@@ -3,6 +3,7 @@ import unittest
 import vtk, qt, ctk, slicer
 from slicer.ScriptedLoadableModule import *
 import logging
+import numpy as np
 
 #
 # LabelMapAPSlice
@@ -247,16 +248,13 @@ class LabelMapAPSliceLogic(ScriptedLoadableModuleLogic):
       first_set = max_y
       last_set = 0
       set_count = 0
-      for y in xrange(0, max_y):
-        for x in xrange(0, max_x):
-          cp = a[z][y][x]
-          if(cp != 0):
-            if(y < first_set):
-              first_set = y
-            if(y > last_set):
-              last_set = y
-            set_count = set_count + 1
-              
+
+      aset = np.where(a[z] > 0)[0]
+      set_count = len(aset)
+      if(set_count > 0):
+        first_set = min(aset)
+        last_set = max(aset)
+            
       logging.info('First set %d last set %d' % (first_set, last_set))
       
       if(set_count > 0):
@@ -293,19 +291,14 @@ class LabelMapAPSliceLogic(ScriptedLoadableModuleLogic):
           
         # copy data
         logging.info('Processing frame')
-        for y in xrange(first_set, last_set + 1):
-          for x in xrange(0, max_x):
-            cp = a[z][y][x]
-            da[z][y][x] = 0
-            if(cp != 0):
-              #z2 = (y - first_set) * slices / (last_set - first_set)
-              #if((z2 >= 0) & (z2 < slices)):
-              #  da[z][y][x] = z2 + 1
-              for z2 in xrange(0, slices):
-                
-                if((y >= zone_starts[z2]) & (y < zone_ends[z2])):
-                  da[z][y][x] = z2 + 1
-                  break
+        input_z = a[z]
+        input_mask = np.zeros_like(input_z)
+
+        for zone in xrange(0, slices):
+          input_mask[xrange(zone_starts[zone], zone_ends[zone])] = zone + 1
+        
+        input_mask[np.where(input_z == 0)] = 0
+        da[z] = input_mask
       
       #imageData.Modified()
       #imageData.GetPointData().GetScalars().Modified()
