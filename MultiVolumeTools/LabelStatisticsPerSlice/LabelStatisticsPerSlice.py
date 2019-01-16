@@ -316,6 +316,9 @@ class LabelStatisticsPerSliceLogic(ScriptedLoadableModuleLogic):
       cur_counts = []
       cur_means = []
       cur_sd = []
+      cur_Rs = []
+      cur_As = []
+      cur_Ss = []
       
       vz = a[z]
       lz = b[z]
@@ -323,13 +326,29 @@ class LabelStatisticsPerSliceLogic(ScriptedLoadableModuleLogic):
       for t in xrange(1, zones+1):
         vzone = vz[lz == t]
         cur_counts.append(len(vzone))
+
+        # Used to generate RAS coordinates from IJK ones
+        pin = [ 0.0, 0.0, z, 1.0 ]
+        pout = [ 0.0, 0.0, 0.0, 0.0 ]
         
         if(len(vzone) > 0):
           cur_means.append(numpy.mean(vzone))
           cur_sd.append(numpy.std(vzone))
+
+          # find centroid of i,j values
+          vidx = numpy.where(lz == t)
+          pin[0] = sum(vidx[0]) / len(vidx[0])
+          pin[1] = sum(vidx[1]) / len(vidx[1])
+
         else:
           cur_means.append(0)
           cur_sd.append(0)
+        
+        # Generate RAS coords
+        ijk_matrix.MultiplyPoint(pin, pout)
+        cur_Rs.append(pout[0])
+        cur_As.append(pout[1])
+        cur_Ss.append(pout[2])
       
       cur_vols = [x * voxel_size / 1000.0 for x in cur_counts]
       
@@ -337,15 +356,9 @@ class LabelStatisticsPerSliceLogic(ScriptedLoadableModuleLogic):
       means.append(cur_means)
       vols.append(cur_vols)
       sds.append(cur_sd)
-
-      # Generate RAS coordinates
-      pin = [ max_x / 2, max_y / 2, z, 1.0 ]
-      pout = [ 0.0, 0.0, 0.0, 0.0 ]
-      ijk_matrix.MultiplyPoint(pin, pout)
-
-      Rs.append(pout[0])
-      As.append(pout[1])
-      Ss.append(pout[2])
+      Rs.append(cur_Rs)
+      As.append(cur_As)
+      Ss.append(cur_Ss)
                
       logging.info('Processed frame %d' % z)
 	  
@@ -365,7 +378,7 @@ class LabelStatisticsPerSliceLogic(ScriptedLoadableModuleLogic):
       
       cur_row = tw.rowCount
       cur_col = tw.columnCount
-      new_col = zones * 4 + 2 + 3
+      new_col = zones * 7 + 2
       
       if(new_col > cur_col):
         tw.setColumnCount(new_col)
@@ -377,9 +390,9 @@ class LabelStatisticsPerSliceLogic(ScriptedLoadableModuleLogic):
           headers.append('z%d_vol' % zone)
           headers.append('z%d_mean' % zone)
           headers.append('z%d_sd' % zone)
-        headers.append('R')
-        headers.append('A')
-        headers.append('S')
+          headers.append('z%d_R' % zone)
+          headers.append('z%d_A' % zone)
+          headers.append('z%d_S' % zone)
         tw.setHorizontalHeaderLabels(headers)
       
       tw.setRowCount(max_z + cur_row)      
@@ -394,13 +407,13 @@ class LabelStatisticsPerSliceLogic(ScriptedLoadableModuleLogic):
           twivol = qt.QTableWidgetItem('%.3g' % vols[z][zone])
           twim = qt.QTableWidgetItem('%.3g' % means[z][zone])
           twisd = qt.QTableWidgetItem('%.3g' % sds[z][zone])
-          tw.setItem(z + cur_row, zone * 4 + 2, twic)
-          tw.setItem(z + cur_row, zone * 4 + 3, twivol)
-          tw.setItem(z + cur_row, zone * 4 + 4, twim)
-          tw.setItem(z + cur_row, zone * 4 + 5, twisd)
-        tw.setItem(z + cur_row, zones * 4 + 2, qt.QTableWidgetItem('%.3g' % Rs[z]))
-        tw.setItem(z + cur_row, zones * 4 + 3, qt.QTableWidgetItem('%.3g' % As[z]))
-        tw.setItem(z + cur_row, zones * 4 + 4, qt.QTableWidgetItem('%.3g' % Ss[z]))
+          tw.setItem(z + cur_row, zone * 7 + 2, twic)
+          tw.setItem(z + cur_row, zone * 7 + 3, twivol)
+          tw.setItem(z + cur_row, zone * 7 + 4, twim)
+          tw.setItem(z + cur_row, zone * 7 + 5, twisd)
+          tw.setItem(z + cur_row, zone * 7 + 6, qt.QTableWidgetItem('%.3g' % Rs[z][zone]))
+          tw.setItem(z + cur_row, zone * 7 + 7, qt.QTableWidgetItem('%.3g' % As[z][zone]))
+          tw.setItem(z + cur_row, zone * 7 + 8, qt.QTableWidgetItem('%.3g' % Ss[z][zone]))
 
     return True
 
