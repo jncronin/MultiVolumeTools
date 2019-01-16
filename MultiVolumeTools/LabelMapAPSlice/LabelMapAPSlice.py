@@ -382,6 +382,12 @@ class LabelMapAPSliceLogic(ScriptedLoadableModuleLogic):
     
     logging.info('Processing completed %d %d' % (imageData.GetScalarRange()[0], imageData.GetScalarRange()[1]))
 
+    # Assign to red slice viewe
+    lm = slicer.app.layoutManager()
+    sl = lm.sliceWidget("Red").sliceLogic()
+    red_cn = sl.GetSliceCompositeNode()
+    red_cn.SetLabelVolumeID(volumeNode.GetID())
+
     return True
 
 
