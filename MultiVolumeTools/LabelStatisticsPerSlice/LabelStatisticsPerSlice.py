@@ -80,7 +80,10 @@ class LabelStatisticsPerSliceWidget(ScriptedLoadableModuleWidget):
     self.lmap.setMRMLScene( slicer.mrmlScene )
     self.lmap.setToolTip( "Pick the input label map." )
     parametersFormLayout.addRow("Label Map: ", self.lmap)
-          
+    
+    self.long = qt.QCheckBox()
+    self.long.setChecked(True)
+    parametersFormLayout.addRow("Long table output: ", self.long)
     #
     # Apply Button
     #
@@ -148,7 +151,7 @@ class LabelStatisticsPerSliceWidget(ScriptedLoadableModuleWidget):
 
   def onApplyButton(self):
     logic = LabelStatisticsPerSliceLogic()
-    logic.run(self.inputSelector.currentNode(), self.lmap.currentNode(), self.progbar, self.tw)
+    logic.run(self.inputSelector.currentNode(), self.lmap.currentNode(), self.progbar, self.tw, self.long.isChecked())
     
   def onClearButton(self):
     self.tw.setRowCount(0)
@@ -265,7 +268,7 @@ class LabelStatisticsPerSliceLogic(ScriptedLoadableModuleLogic):
     annotationLogic = slicer.modules.annotations.logic()
     annotationLogic.CreateSnapShot(name, description, type, 1, imageData) 
 
-  def run(self, input_vol, lmap, pb = None, tw = None):
+  def run(self, input_vol, lmap, pb = None, tw = None, long = True):
     """
     Run the actual algorithm
     """
@@ -372,48 +375,94 @@ class LabelStatisticsPerSliceLogic(ScriptedLoadableModuleLogic):
     
     print counts
     print means
-    
+
     if (tw is not None):
-      # print in tabular form
+      if long == True:
+        # print in long tabular form
+        cur_row = tw.rowCount
+        cur_col = tw.columnCount
+        new_col = 10
+        
+        if(new_col > cur_col):
+          tw.setColumnCount(new_col)
+          headers = []
+          headers.append('input_vol')
+          headers.append('label_map')
+          headers.append('zone')
+          headers.append('count')
+          headers.append('vol')
+          headers.append('mean')
+          headers.append('sd')
+          headers.append('R')
+          headers.append('A')
+          headers.append('S')
+          tw.setHorizontalHeaderLabels(headers)
       
-      cur_row = tw.rowCount
-      cur_col = tw.columnCount
-      new_col = zones * 7 + 2
+        tw.setRowCount(max_z * zones + cur_row)      
+
+        for z in xrange(0, max_z):
+          for zone in xrange(0, zones):
+            tw.setItem(z * zones + zone + cur_row, 0, qt.QTableWidgetItem(input_vol.GetName()))
+            tw.setItem(z * zones + zone + cur_row, 1, qt.QTableWidgetItem(lmap.GetName()))
+            tw.setItem(z * zones + zone + cur_row, 2, qt.QTableWidgetItem('%d' % zone))
+            tw.setItem(z * zones + zone + cur_row, 3, qt.QTableWidgetItem('%d' % counts[z][zone]))
+            tw.setItem(z * zones + zone + cur_row, 4, qt.QTableWidgetItem('%.3g' % vols[z][zone]))
+
+            # handle count == 0 as NA
+            if counts[z][zone] == 0:
+              tw.setItem(z * zones + zone + cur_row, 5, qt.QTableWidgetItem('NA'))
+              tw.setItem(z * zones + zone + cur_row, 6, qt.QTableWidgetItem('NA'))
+              tw.setItem(z * zones + zone + cur_row, 7, qt.QTableWidgetItem('NA'))
+              tw.setItem(z * zones + zone + cur_row, 8, qt.QTableWidgetItem('NA'))
+              tw.setItem(z * zones + zone + cur_row, 9, qt.QTableWidgetItem('NA'))
+            else:
+              tw.setItem(z * zones + zone + cur_row, 5, qt.QTableWidgetItem('%.3g' % means[z][zone]))
+              tw.setItem(z * zones + zone + cur_row, 6, qt.QTableWidgetItem('%.3g' % sds[z][zone]))
+              tw.setItem(z * zones + zone + cur_row, 7, qt.QTableWidgetItem('%.3g' % Rs[z][zone]))
+              tw.setItem(z * zones + zone + cur_row, 8, qt.QTableWidgetItem('%.3g' % As[z][zone]))
+              tw.setItem(z * zones + zone + cur_row, 9, qt.QTableWidgetItem('%.3g' % Ss[z][zone]))
+
+      else:
+        # print in wide tabular form
       
-      if(new_col > cur_col):
-        tw.setColumnCount(new_col)
-        headers = []
-        headers.append('input_vol')
-        headers.append('label_map')
-        for zone in xrange(0, zones):
-          headers.append('z%d_count' % zone)
-          headers.append('z%d_vol' % zone)
-          headers.append('z%d_mean' % zone)
-          headers.append('z%d_sd' % zone)
-          headers.append('z%d_R' % zone)
-          headers.append('z%d_A' % zone)
-          headers.append('z%d_S' % zone)
-        tw.setHorizontalHeaderLabels(headers)
-      
-      tw.setRowCount(max_z + cur_row)      
-      
-      for z in xrange(0, max_z):
-        twiv = qt.QTableWidgetItem(input_vol.GetName())
-        twlm = qt.QTableWidgetItem(lmap.GetName())
-        tw.setItem(z + cur_row, 0, twiv)
-        tw.setItem(z + cur_row, 1, twlm)
-        for zone in xrange(0, zones):
-          twic = qt.QTableWidgetItem('%d' % counts[z][zone])
-          twivol = qt.QTableWidgetItem('%.3g' % vols[z][zone])
-          twim = qt.QTableWidgetItem('%.3g' % means[z][zone])
-          twisd = qt.QTableWidgetItem('%.3g' % sds[z][zone])
-          tw.setItem(z + cur_row, zone * 7 + 2, twic)
-          tw.setItem(z + cur_row, zone * 7 + 3, twivol)
-          tw.setItem(z + cur_row, zone * 7 + 4, twim)
-          tw.setItem(z + cur_row, zone * 7 + 5, twisd)
-          tw.setItem(z + cur_row, zone * 7 + 6, qt.QTableWidgetItem('%.3g' % Rs[z][zone]))
-          tw.setItem(z + cur_row, zone * 7 + 7, qt.QTableWidgetItem('%.3g' % As[z][zone]))
-          tw.setItem(z + cur_row, zone * 7 + 8, qt.QTableWidgetItem('%.3g' % Ss[z][zone]))
+        cur_row = tw.rowCount
+        cur_col = tw.columnCount
+        new_col = zones * 7 + 2
+        
+        if(new_col > cur_col):
+          tw.setColumnCount(new_col)
+          headers = []
+          headers.append('input_vol')
+          headers.append('label_map')
+          for zone in xrange(0, zones):
+            headers.append('z%d_count' % zone)
+            headers.append('z%d_vol' % zone)
+            headers.append('z%d_mean' % zone)
+            headers.append('z%d_sd' % zone)
+            headers.append('z%d_R' % zone)
+            headers.append('z%d_A' % zone)
+            headers.append('z%d_S' % zone)
+          tw.setHorizontalHeaderLabels(headers)
+        
+        tw.setRowCount(max_z + cur_row)      
+        
+        for z in xrange(0, max_z):
+          twiv = qt.QTableWidgetItem(input_vol.GetName())
+          twlm = qt.QTableWidgetItem(lmap.GetName())
+          tw.setItem(z + cur_row, 0, twiv)
+          tw.setItem(z + cur_row, 1, twlm)
+          for zone in xrange(0, zones):
+            twic = qt.QTableWidgetItem('%d' % counts[z][zone])
+            twivol = qt.QTableWidgetItem('%.3g' % vols[z][zone])
+            twim = qt.QTableWidgetItem('%.3g' % means[z][zone])
+            twisd = qt.QTableWidgetItem('%.3g' % sds[z][zone])
+            tw.setItem(z + cur_row, zone * 7 + 2, twic)
+            tw.setItem(z + cur_row, zone * 7 + 3, twivol)
+            tw.setItem(z + cur_row, zone * 7 + 4, twim)
+            tw.setItem(z + cur_row, zone * 7 + 5, twisd)
+            tw.setItem(z + cur_row, zone * 7 + 6, qt.QTableWidgetItem('%.3g' % Rs[z][zone]))
+            tw.setItem(z + cur_row, zone * 7 + 7, qt.QTableWidgetItem('%.3g' % As[z][zone]))
+            tw.setItem(z + cur_row, zone * 7 + 8, qt.QTableWidgetItem('%.3g' % Ss[z][zone]))
 
     return True
 
