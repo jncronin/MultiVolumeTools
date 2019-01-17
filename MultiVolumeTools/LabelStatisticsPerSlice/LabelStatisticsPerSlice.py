@@ -373,9 +373,6 @@ class LabelStatisticsPerSliceLogic(ScriptedLoadableModuleLogic):
     
     logging.info('Processing completed')
     
-    print counts
-    print means
-
     if (tw is not None):
       if long == True:
         # print in long tabular form
