@@ -234,6 +234,11 @@ class AtelectSegmentLogic(ScriptedLoadableModuleLogic):
     #displayNode.SetInterpolate(0)
     
     logging.info('Processing completed %d %d' % (imageData.GetScalarRange()[0], imageData.GetScalarRange()[1]))
+    if pb is None:
+      pass
+    else:
+      pb.setValue(100)
+      slicer.app.processEvents()
 
     # Assign to red slice viewe
     lm = slicer.app.layoutManager()
