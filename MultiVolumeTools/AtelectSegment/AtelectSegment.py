@@ -240,6 +240,7 @@ class AtelectSegmentLogic(ScriptedLoadableModuleLogic):
     sl = lm.sliceWidget("Red").sliceLogic()
     red_cn = sl.GetSliceCompositeNode()
     red_cn.SetLabelVolumeID(volumeNode.GetID())
+    red_cn.SetBackgroundVolumeID(input_vol.GetID())
 
     return True
 
