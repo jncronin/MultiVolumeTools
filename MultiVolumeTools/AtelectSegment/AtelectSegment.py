@@ -222,16 +222,12 @@ class AtelectSegmentLogic(ScriptedLoadableModuleLogic):
     volumeNode.SetIJKToRASDirectionMatrix(vm)
     volumeNode.SetImageDataConnection(thresholder.GetOutputPort())
     # Add volume to scene
-    displayNode=slicer.vtkMRMLScalarVolumeDisplayNode()
+    displayNode=slicer.vtkMRMLLabelMapVolumeDisplayNode()
     slicer.mrmlScene.AddNode(displayNode)
     colorNode = slicer.util.getNode('GenericAnatomyColors')
     displayNode.SetAndObserveColorNodeID(colorNode.GetID())
     volumeNode.SetAndObserveDisplayNodeID(displayNode.GetID())
     volumeNode.CreateDefaultStorageNode()
-    displayNode.AutoWindowLevelOff()
-    displayNode.SetWindow(float(5))
-    displayNode.SetLevel(float(4 + 1) / 2.0)
-    #displayNode.SetInterpolate(0)
     
     logging.info('Processing completed %d %d' % (imageData.GetScalarRange()[0], imageData.GetScalarRange()[1]))
     if pb is None:
@@ -240,12 +236,8 @@ class AtelectSegmentLogic(ScriptedLoadableModuleLogic):
       pb.setValue(100)
       slicer.app.processEvents()
 
-    # Assign to red slice viewe
-    lm = slicer.app.layoutManager()
-    sl = lm.sliceWidget("Red").sliceLogic()
-    red_cn = sl.GetSliceCompositeNode()
-    red_cn.SetLabelVolumeID(volumeNode.GetID())
-    red_cn.SetBackgroundVolumeID(input_vol.GetID())
+    # Assign to slice viewe
+    slicer.util.setSliceViewerLayers(background=input_vol, label=volumeNode)
 
     return True
 
