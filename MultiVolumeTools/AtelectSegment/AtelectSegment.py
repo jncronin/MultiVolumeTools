@@ -211,6 +211,7 @@ class AtelectSegmentLogic(ScriptedLoadableModuleLogic):
     
     thresholder=vtk.vtkImageThreshold()
     thresholder.SetInputData(imageData)
+    thresholder.Update()
     #thresholder.SetInValue(0)
     #thresholder.SetOutValue(0)
     # Create volume node
@@ -224,7 +225,23 @@ class AtelectSegmentLogic(ScriptedLoadableModuleLogic):
     # Add volume to scene
     displayNode=slicer.vtkMRMLLabelMapVolumeDisplayNode()
     slicer.mrmlScene.AddNode(displayNode)
-    colorNode = slicer.util.getNode('GenericAnatomyColors')
+    colorNode = slicer.util.getNode('LungColours')
+    if colorNode is None:
+      colorNode = slicer.vtkMRMLColorTableNode()
+      colorNode.SetTypeToUser()
+      colorNode.SetNumberOfColors(5)
+      colorNode.SetName("LungColours")
+      colorNode.SetNamesInitialised(5)
+
+      colorNode.SetColor(0, "Background", 0.0, 0.0, 0.0, 0.0)
+      colorNode.SetColor(1, "Atelectasis", 255.0/255.0, 1.0/255.0, 0.0/255.0, 1.0)
+      colorNode.SetColor(2, "Poorly Aerated", 246.0/255.0, 255.0/255.0, 4.0/255.0, 1.0)
+      colorNode.SetColor(3, "Normally Aerated", 58.0/255.0, 255.0/255.0, 28.0/255.0, 1.0)
+      colorNode.SetColor(4, "Overdistended", 47.0/255.0, 71.0/255.0, 255.0/255.0, 1.0)
+      colorNode.SetHideFromEditors(0)
+
+      slicer.mrmlScene.AddNode(colorNode)
+
     displayNode.SetAndObserveColorNodeID(colorNode.GetID())
     volumeNode.SetAndObserveDisplayNodeID(displayNode.GetID())
     volumeNode.CreateDefaultStorageNode()
@@ -236,8 +253,11 @@ class AtelectSegmentLogic(ScriptedLoadableModuleLogic):
       pb.setValue(100)
       slicer.app.processEvents()
 
-    # Assign to slice viewe
+    # Assign to slice viewers
     slicer.util.setSliceViewerLayers(background=input_vol, label=volumeNode)
+    for sliceViewName in slicer.app.layoutManager().sliceViewNames():
+     sw = slicer.app.layoutManager().sliceWidget(sliceViewName)
+     sw.sliceLogic().FitSliceToAll()
 
     return True
 
