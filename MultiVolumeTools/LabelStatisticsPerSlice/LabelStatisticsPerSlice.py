@@ -107,9 +107,9 @@ class LabelStatisticsPerSliceWidget(ScriptedLoadableModuleWidget):
     #
     # Progress Bar
     #
-    self.progbar = qt.QProgressBar();
-    self.progbar.setValue(0);
-    parametersFormLayout.addRow(self.progbar);
+    self.progbar = qt.QProgressBar()
+    self.progbar.setValue(0)
+    parametersFormLayout.addRow(self.progbar)
 
     # Add vertical spacer
     #self.layout.addStretch(1)
