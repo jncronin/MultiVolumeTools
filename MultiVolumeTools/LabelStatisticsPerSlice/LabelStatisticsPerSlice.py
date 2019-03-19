@@ -84,6 +84,10 @@ class LabelStatisticsPerSliceWidget(ScriptedLoadableModuleWidget):
     self.long = qt.QCheckBox()
     self.long.setChecked(True)
     parametersFormLayout.addRow("Long table output: ", self.long)
+
+    self.whole = qt.QCheckBox()
+    self.whole.setChecked(False)
+    parametersFormLayout.addRow("Whole volume: ", self.whole)
     #
     # Apply Button
     #
@@ -151,7 +155,7 @@ class LabelStatisticsPerSliceWidget(ScriptedLoadableModuleWidget):
 
   def onApplyButton(self):
     logic = LabelStatisticsPerSliceLogic()
-    logic.run(self.inputSelector.currentNode(), self.lmap.currentNode(), self.progbar, self.tw, self.long.isChecked())
+    logic.run(self.inputSelector.currentNode(), self.lmap.currentNode(), self.progbar, self.tw, self.long.isChecked(), self.whole.isChecked())
     
   def onClearButton(self):
     self.tw.setRowCount(0)
@@ -268,7 +272,7 @@ class LabelStatisticsPerSliceLogic(ScriptedLoadableModuleLogic):
     annotationLogic = slicer.modules.annotations.logic()
     annotationLogic.CreateSnapShot(name, description, type, 1, imageData) 
 
-  def run(self, input_vol, lmap, pb = None, tw = None, long = True):
+  def run(self, input_vol, lmap, pb = None, tw = None, long = True, whole = False):
     """
     Run the actual algorithm
     """
@@ -309,6 +313,9 @@ class LabelStatisticsPerSliceLogic(ScriptedLoadableModuleLogic):
     ijk_matrix = vtk.vtkMatrix4x4()
     vtk.vtkMatrix4x4.Invert(ras_matrix, ijk_matrix)
 
+    if whole:
+      max_z = 1
+
     if pb is None:
       pass
     else:
@@ -323,8 +330,12 @@ class LabelStatisticsPerSliceLogic(ScriptedLoadableModuleLogic):
       cur_As = []
       cur_Ss = []
       
-      vz = a[z]
-      lz = b[z]
+      if whole:
+        vz = a
+        lz = b
+      else:
+        vz = a[z]
+        lz = b[z]
       
       for t in xrange(1, zones+1):
         vzone = vz[lz == t]
@@ -343,6 +354,8 @@ class LabelStatisticsPerSliceLogic(ScriptedLoadableModuleLogic):
           pin[0] = sum(vidx[0]) / len(vidx[0])
           pin[1] = sum(vidx[1]) / len(vidx[1])
 
+          if whole:
+            pin[2] = sum(vidx[2] / len(vidx[2]))
         else:
           cur_means.append(0)
           cur_sd.append(0)
