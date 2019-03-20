@@ -109,6 +109,11 @@ class LabelStatisticsPerSliceWidget(ScriptedLoadableModuleWidget):
     self.jcbutton.enabled = True
     parametersFormLayout.addRow(self.jcbutton)
     	
+    # Run analysis on all combinations of label and volume maps
+    self.allbutton = qt.QPushButton("Run on all")
+    self.allbutton.enabled = True
+    parametersFormLayout.addRow(self.allbutton)    	
+
     #
     # Progress Bar
     #
@@ -147,6 +152,7 @@ class LabelStatisticsPerSliceWidget(ScriptedLoadableModuleWidget):
     self.clearButton.connect('clicked(bool)', self.onClearButton)
     self.saveButton.connect('clicked(bool)', self.onSaveButton)
     self.jcbutton.connect('clicked(bool)', self.onJCButton)
+    self.allbutton.connect('clicked(bool)', self.onAll)
     self.inputSelector.connect("currentNodeChanged(vtkMRMLNode*)", self.onSelect)
     self.lmap.connect("currentNodeChanged(vtkMRMLNode*)", self.onSelect)
     
@@ -175,6 +181,22 @@ class LabelStatisticsPerSliceWidget(ScriptedLoadableModuleWidget):
     for curorder in myorder:
       logic.run(slicer.util.getNode(curorder[0]), slicer.util.getNode(curorder[1]), self.progbar, self.tw, self.long.isChecked(), self.whole.isChecked())
 
+  def onAll(self):
+    logic = LabelStatisticsPerSliceLogic()
+
+    # get all volume nodes and label maps
+    d = slicer.util.getNodesByClass('vtkMRMLScalarVolumeNode')
+
+    print(d)
+    vns = filter(lambda x: x.IsA('vtkMRMLLabelMapVolumeNode')==0, d)
+    lms = filter(lambda x: x.IsA('vtkMRMLLabelMapVolumeNode')==1, d)
+
+    for vn in vns:
+      for lm in lms:
+        if vn.GetOrigin() == lm.GetOrigin() and vn.GetSpacing() == lm.GetSpacing() and vn.GetImageData().GetDimensions() == lm.GetImageData().GetDimensions():
+          print(vn.GetName() + "/" + lm.GetName())
+          logic.run(vn, lm, self.progbar, self.tw, self.long.isChecked(), self.whole.isChecked())
+  
   def onSelect(self):
     self.applyButton.enabled = (self.inputSelector.currentNode() is not None) & (self.lmap.currentNode() is not None)
 
