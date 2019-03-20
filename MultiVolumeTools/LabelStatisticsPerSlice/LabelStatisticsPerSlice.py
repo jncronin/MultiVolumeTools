@@ -295,6 +295,7 @@ class LabelStatisticsPerSliceLogic(ScriptedLoadableModuleLogic):
     means = []
     vols = []
     sds = []
+    medians = []
     Rs = []
     As = []
     Ss = []
@@ -326,6 +327,7 @@ class LabelStatisticsPerSliceLogic(ScriptedLoadableModuleLogic):
       cur_counts = []
       cur_means = []
       cur_sd = []
+      cur_medians = []
       cur_Rs = []
       cur_As = []
       cur_Ss = []
@@ -348,6 +350,7 @@ class LabelStatisticsPerSliceLogic(ScriptedLoadableModuleLogic):
         if(len(vzone) > 0):
           cur_means.append(numpy.mean(vzone))
           cur_sd.append(numpy.std(vzone))
+          cur_medians.append(numpy.median(vzone))
 
           # find centroid of i,j values
           vidx = numpy.where(lz == t)
@@ -372,6 +375,7 @@ class LabelStatisticsPerSliceLogic(ScriptedLoadableModuleLogic):
       means.append(cur_means)
       vols.append(cur_vols)
       sds.append(cur_sd)
+      medians.append(cur_medians)
       Rs.append(cur_Rs)
       As.append(cur_As)
       Ss.append(cur_Ss)
@@ -391,7 +395,7 @@ class LabelStatisticsPerSliceLogic(ScriptedLoadableModuleLogic):
         # print in long tabular form
         cur_row = tw.rowCount
         cur_col = tw.columnCount
-        new_col = 10
+        new_col = 11
         
         if(new_col > cur_col):
           tw.setColumnCount(new_col)
@@ -403,6 +407,7 @@ class LabelStatisticsPerSliceLogic(ScriptedLoadableModuleLogic):
           headers.append('vol')
           headers.append('mean')
           headers.append('sd')
+          headers.append('median')
           headers.append('R')
           headers.append('A')
           headers.append('S')
@@ -425,19 +430,21 @@ class LabelStatisticsPerSliceLogic(ScriptedLoadableModuleLogic):
               tw.setItem(z * zones + zone + cur_row, 7, qt.QTableWidgetItem('NA'))
               tw.setItem(z * zones + zone + cur_row, 8, qt.QTableWidgetItem('NA'))
               tw.setItem(z * zones + zone + cur_row, 9, qt.QTableWidgetItem('NA'))
+              tw.setItem(z * zones + zone + cur_row, 10, qt.QTableWidgetItem('NA'))
             else:
               tw.setItem(z * zones + zone + cur_row, 5, qt.QTableWidgetItem('%.3g' % means[z][zone]))
               tw.setItem(z * zones + zone + cur_row, 6, qt.QTableWidgetItem('%.3g' % sds[z][zone]))
-              tw.setItem(z * zones + zone + cur_row, 7, qt.QTableWidgetItem('%.3g' % Rs[z][zone]))
-              tw.setItem(z * zones + zone + cur_row, 8, qt.QTableWidgetItem('%.3g' % As[z][zone]))
-              tw.setItem(z * zones + zone + cur_row, 9, qt.QTableWidgetItem('%.3g' % Ss[z][zone]))
+              tw.setItem(z * zones + zone + cur_row, 7, qt.QTableWidgetItem('%.3g' % medians[z][zone]))
+              tw.setItem(z * zones + zone + cur_row, 8, qt.QTableWidgetItem('%.3g' % Rs[z][zone]))
+              tw.setItem(z * zones + zone + cur_row, 9, qt.QTableWidgetItem('%.3g' % As[z][zone]))
+              tw.setItem(z * zones + zone + cur_row, 10, qt.QTableWidgetItem('%.3g' % Ss[z][zone]))
 
       else:
         # print in wide tabular form
       
         cur_row = tw.rowCount
         cur_col = tw.columnCount
-        new_col = zones * 7 + 2
+        new_col = zones * 8 + 2
         
         if(new_col > cur_col):
           tw.setColumnCount(new_col)
@@ -449,6 +456,7 @@ class LabelStatisticsPerSliceLogic(ScriptedLoadableModuleLogic):
             headers.append('z%d_vol' % zone)
             headers.append('z%d_mean' % zone)
             headers.append('z%d_sd' % zone)
+            headers.append('z%d_median' % zone)
             headers.append('z%d_R' % zone)
             headers.append('z%d_A' % zone)
             headers.append('z%d_S' % zone)
@@ -466,13 +474,15 @@ class LabelStatisticsPerSliceLogic(ScriptedLoadableModuleLogic):
             twivol = qt.QTableWidgetItem('%.3g' % vols[z][zone])
             twim = qt.QTableWidgetItem('%.3g' % means[z][zone])
             twisd = qt.QTableWidgetItem('%.3g' % sds[z][zone])
-            tw.setItem(z + cur_row, zone * 7 + 2, twic)
-            tw.setItem(z + cur_row, zone * 7 + 3, twivol)
-            tw.setItem(z + cur_row, zone * 7 + 4, twim)
-            tw.setItem(z + cur_row, zone * 7 + 5, twisd)
-            tw.setItem(z + cur_row, zone * 7 + 6, qt.QTableWidgetItem('%.3g' % Rs[z][zone]))
-            tw.setItem(z + cur_row, zone * 7 + 7, qt.QTableWidgetItem('%.3g' % As[z][zone]))
-            tw.setItem(z + cur_row, zone * 7 + 8, qt.QTableWidgetItem('%.3g' % Ss[z][zone]))
+            twimed = qt.QTableWidgetItem('%.3g' % medians[z][zone])
+            tw.setItem(z + cur_row, zone * 8 + 2, twic)
+            tw.setItem(z + cur_row, zone * 8 + 3, twivol)
+            tw.setItem(z + cur_row, zone * 8 + 4, twim)
+            tw.setItem(z + cur_row, zone * 8 + 5, twisd)
+            tw.setItem(z + cur_row, zone * 8 + 6, twimed)
+            tw.setItem(z + cur_row, zone * 8 + 7, qt.QTableWidgetItem('%.3g' % Rs[z][zone]))
+            tw.setItem(z + cur_row, zone * 8 + 8, qt.QTableWidgetItem('%.3g' % As[z][zone]))
+            tw.setItem(z + cur_row, zone * 8 + 9, qt.QTableWidgetItem('%.3g' % Ss[z][zone]))
 
     return True
 
