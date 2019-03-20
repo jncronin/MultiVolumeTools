@@ -103,6 +103,11 @@ class LabelStatisticsPerSliceWidget(ScriptedLoadableModuleWidget):
     self.clearButton.toolTip = "Clear output table"
     self.clearButton.enabled = True
     parametersFormLayout.addRow(self.clearButton)
+
+    # Special JC version to automate things
+    self.jcbutton = qt.QPushButton("AutoJC")
+    self.jcbutton.enabled = True
+    parametersFormLayout.addRow(self.jcbutton)
     	
     #
     # Progress Bar
@@ -141,6 +146,7 @@ class LabelStatisticsPerSliceWidget(ScriptedLoadableModuleWidget):
     self.applyButton.connect('clicked(bool)', self.onApplyButton)
     self.clearButton.connect('clicked(bool)', self.onClearButton)
     self.saveButton.connect('clicked(bool)', self.onSaveButton)
+    self.jcbutton.connect('clicked(bool)', self.onJCButton)
     self.inputSelector.connect("currentNodeChanged(vtkMRMLNode*)", self.onSelect)
     self.lmap.connect("currentNodeChanged(vtkMRMLNode*)", self.onSelect)
     
@@ -149,6 +155,25 @@ class LabelStatisticsPerSliceWidget(ScriptedLoadableModuleWidget):
 
   def cleanup(self):
     pass
+
+  def onJCButton(self):
+    self.tw.setRowCount(0)
+    self.tw.setColumnCount(0)
+
+    logic = LabelStatisticsPerSliceLogic()
+    
+    myorder = [ [ 'x', 'm-label' ],
+                [ 'y', 'm-label' ],
+                [ 'z', 'm-label' ],
+                [ 'm', 'm-label' ],
+                [ 'x', 'ap3' ],
+                [ 'y', 'ap3' ],
+                [ 'z', 'ap3' ],
+                [ 'm', 'ap3' ],
+                [ 'y', 'fam' ] ]
+    
+    for curorder in myorder:
+      logic.run(slicer.util.getNode(curorder[0]), slicer.util.getNode(curorder[1]), self.progbar, self.tw, self.long.isChecked(), self.whole.isChecked())
 
   def onSelect(self):
     self.applyButton.enabled = (self.inputSelector.currentNode() is not None) & (self.lmap.currentNode() is not None)
@@ -276,6 +301,9 @@ class LabelStatisticsPerSliceLogic(ScriptedLoadableModuleLogic):
     """
     Run the actual algorithm
     """
+
+    if input_vol is None or lmap is None:
+      return
 
     logging.info('Processing started')
     
