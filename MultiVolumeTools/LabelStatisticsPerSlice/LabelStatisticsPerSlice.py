@@ -88,6 +88,10 @@ class LabelStatisticsPerSliceWidget(ScriptedLoadableModuleWidget):
     self.whole = qt.QCheckBox()
     self.whole.setChecked(False)
     parametersFormLayout.addRow("Whole volume: ", self.whole)
+
+    self.sm = qt.QLineEdit()
+    self.sm.text = '0'
+    parametersFormLayout.addRow("Slice Modulo: ", self.sm)
     #
     # Apply Button
     #
@@ -179,7 +183,7 @@ class LabelStatisticsPerSliceWidget(ScriptedLoadableModuleWidget):
                 [ 'y', 'fam' ] ]
     
     for curorder in myorder:
-      logic.run(slicer.util.getNode(curorder[0]), slicer.util.getNode(curorder[1]), self.progbar, self.tw, self.long.isChecked(), self.whole.isChecked())
+      logic.run(slicer.util.getNode(curorder[0]), slicer.util.getNode(curorder[1]), self.progbar, self.tw, self.long.isChecked(), self.whole.isChecked(), int(self.sm.text))
 
   def onAll(self):
     logic = LabelStatisticsPerSliceLogic()
@@ -195,14 +199,14 @@ class LabelStatisticsPerSliceWidget(ScriptedLoadableModuleWidget):
       for lm in lms:
         if vn.GetOrigin() == lm.GetOrigin() and vn.GetSpacing() == lm.GetSpacing() and vn.GetImageData().GetDimensions() == lm.GetImageData().GetDimensions():
           print(vn.GetName() + "/" + lm.GetName())
-          logic.run(vn, lm, self.progbar, self.tw, self.long.isChecked(), self.whole.isChecked())
+          logic.run(vn, lm, self.progbar, self.tw, self.long.isChecked(), self.whole.isChecked(), int(self.sm.text))
   
   def onSelect(self):
     self.applyButton.enabled = (self.inputSelector.currentNode() is not None) & (self.lmap.currentNode() is not None)
 
   def onApplyButton(self):
     logic = LabelStatisticsPerSliceLogic()
-    logic.run(self.inputSelector.currentNode(), self.lmap.currentNode(), self.progbar, self.tw, self.long.isChecked(), self.whole.isChecked())
+    logic.run(self.inputSelector.currentNode(), self.lmap.currentNode(), self.progbar, self.tw, self.long.isChecked(), self.whole.isChecked(), int(self.sm.text))
     
   def onClearButton(self):
     self.tw.setRowCount(0)
@@ -319,7 +323,7 @@ class LabelStatisticsPerSliceLogic(ScriptedLoadableModuleLogic):
     annotationLogic = slicer.modules.annotations.logic()
     annotationLogic.CreateSnapShot(name, description, type, 1, imageData) 
 
-  def run(self, input_vol, lmap, pb = None, tw = None, long = True, whole = False):
+  def run(self, input_vol, lmap, pb = None, tw = None, long = True, whole = False, slice_modulo = 1):
     """
     Run the actual algorithm
     """
@@ -365,15 +369,21 @@ class LabelStatisticsPerSliceLogic(ScriptedLoadableModuleLogic):
     vtk.vtkMatrix4x4.Invert(ras_matrix, ijk_matrix)
 
     if whole:
-      max_z = 1
+      corr_z = [range(0, max_z)]
+    elif slice_modulo > 0:
+      corr_z = [range(0,max_z)[x::slice_modulo] for x in range(0, slice_modulo)]
+    else:
+      corr_z = range(0, max_z)
 
     if pb is None:
       pass
     else:
       pb.setValue(0)
       slicer.app.processEvents()
-               
-    for z in xrange(0, max_z):
+              
+    for zidx in range(0, len(corr_z)):
+      z = corr_z[zidx]
+
       cur_counts = []
       cur_means = []
       cur_sd = []
@@ -394,7 +404,7 @@ class LabelStatisticsPerSliceLogic(ScriptedLoadableModuleLogic):
         cur_counts.append(len(vzone))
 
         # Used to generate RAS coordinates from IJK ones
-        pin = [ 0.0, 0.0, z, 1.0 ]
+        pin = [ 0.0, 0.0, numpy.mean(z), 1.0 ]
         pout = [ 0.0, 0.0, 0.0, 0.0 ]
         
         if(len(vzone) > 0):
@@ -430,15 +440,17 @@ class LabelStatisticsPerSliceLogic(ScriptedLoadableModuleLogic):
       As.append(cur_As)
       Ss.append(cur_Ss)
                
-      logging.info('Processed frame %d' % z)
+      logging.info('Processed frame %d' % zidx)
 	  
       if pb is None:
         pass
       else:
-        pb.setValue((z + 1) * 100 / max_z)
+        pb.setValue((zidx + 1) * 100 / len(corr_z))
         slicer.app.processEvents()
     
     logging.info('Processing completed')
+
+    max_z = len(corr_z)
     
     if (tw is not None):
       if long == True:
@@ -463,9 +475,9 @@ class LabelStatisticsPerSliceLogic(ScriptedLoadableModuleLogic):
           headers.append('S')
           tw.setHorizontalHeaderLabels(headers)
       
-        tw.setRowCount(max_z * zones + cur_row)      
+        tw.setRowCount(max_z * zones + cur_row)
 
-        for z in xrange(0, max_z):
+        for z in xrange(0, len(corr_z)):
           for zone in xrange(0, zones):
             tw.setItem(z * zones + zone + cur_row, 0, qt.QTableWidgetItem(input_vol.GetName()))
             tw.setItem(z * zones + zone + cur_row, 1, qt.QTableWidgetItem(lmap.GetName()))
@@ -514,7 +526,7 @@ class LabelStatisticsPerSliceLogic(ScriptedLoadableModuleLogic):
         
         tw.setRowCount(max_z + cur_row)      
         
-        for z in xrange(0, max_z):
+        for z in xrange(0, len(corr_z)):
           twiv = qt.QTableWidgetItem(input_vol.GetName())
           twlm = qt.QTableWidgetItem(lmap.GetName())
           tw.setItem(z + cur_row, 0, twiv)
