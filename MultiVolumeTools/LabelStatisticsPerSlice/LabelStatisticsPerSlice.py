@@ -353,6 +353,7 @@ class LabelStatisticsPerSliceLogic(ScriptedLoadableModuleLogic):
     Rs = []
     As = []
     Ss = []
+    slice_counts = []
     zones = int(lm_im.GetScalarRange()[1])
     print('%d zones' % zones)
     
@@ -373,7 +374,7 @@ class LabelStatisticsPerSliceLogic(ScriptedLoadableModuleLogic):
     elif slice_modulo > 0:
       corr_z = [range(0,max_z)[x::slice_modulo] for x in range(0, slice_modulo)]
     else:
-      corr_z = range(0, max_z)
+      corr_z = [[x] for x in range(0, max_z)]
 
     if pb is None:
       pass
@@ -391,6 +392,7 @@ class LabelStatisticsPerSliceLogic(ScriptedLoadableModuleLogic):
       cur_Rs = []
       cur_As = []
       cur_Ss = []
+      cur_slice_counts = []
       
       if whole:
         vz = a
@@ -428,6 +430,9 @@ class LabelStatisticsPerSliceLogic(ScriptedLoadableModuleLogic):
         cur_Rs.append(pout[0])
         cur_As.append(pout[1])
         cur_Ss.append(pout[2])
+
+        # number of slices in current entry
+        cur_slice_counts.append(len(z))
       
       cur_vols = [x * voxel_size / 1000.0 for x in cur_counts]
       
@@ -439,6 +444,7 @@ class LabelStatisticsPerSliceLogic(ScriptedLoadableModuleLogic):
       Rs.append(cur_Rs)
       As.append(cur_As)
       Ss.append(cur_Ss)
+      slice_counts.append(cur_slice_counts)
                
       logging.info('Processed frame %d' % zidx)
 	  
@@ -457,7 +463,7 @@ class LabelStatisticsPerSliceLogic(ScriptedLoadableModuleLogic):
         # print in long tabular form
         cur_row = tw.rowCount
         cur_col = tw.columnCount
-        new_col = 11
+        new_col = 12
         
         if(new_col > cur_col):
           tw.setColumnCount(new_col)
@@ -473,6 +479,7 @@ class LabelStatisticsPerSliceLogic(ScriptedLoadableModuleLogic):
           headers.append('R')
           headers.append('A')
           headers.append('S')
+          headers.append('slice_count')
           tw.setHorizontalHeaderLabels(headers)
       
         tw.setRowCount(max_z * zones + cur_row)
@@ -500,13 +507,15 @@ class LabelStatisticsPerSliceLogic(ScriptedLoadableModuleLogic):
               tw.setItem(z * zones + zone + cur_row, 8, qt.QTableWidgetItem('%.3g' % Rs[z][zone]))
               tw.setItem(z * zones + zone + cur_row, 9, qt.QTableWidgetItem('%.3g' % As[z][zone]))
               tw.setItem(z * zones + zone + cur_row, 10, qt.QTableWidgetItem('%.3g' % Ss[z][zone]))
+            
+            tw.setItem(z * zones + zone + cur_row, 11, qt.QTableWidgetItem('%d' % slice_counts[z][zone]))
 
       else:
         # print in wide tabular form
       
         cur_row = tw.rowCount
         cur_col = tw.columnCount
-        new_col = zones * 8 + 2
+        new_col = zones * 9 + 2
         
         if(new_col > cur_col):
           tw.setColumnCount(new_col)
@@ -522,6 +531,7 @@ class LabelStatisticsPerSliceLogic(ScriptedLoadableModuleLogic):
             headers.append('z%d_R' % zone)
             headers.append('z%d_A' % zone)
             headers.append('z%d_S' % zone)
+            headers.append('z%d_slice_count' % zone)
           tw.setHorizontalHeaderLabels(headers)
         
         tw.setRowCount(max_z + cur_row)      
@@ -537,14 +547,15 @@ class LabelStatisticsPerSliceLogic(ScriptedLoadableModuleLogic):
             twim = qt.QTableWidgetItem('%.3g' % means[z][zone])
             twisd = qt.QTableWidgetItem('%.3g' % sds[z][zone])
             twimed = qt.QTableWidgetItem('%.3g' % medians[z][zone])
-            tw.setItem(z + cur_row, zone * 8 + 2, twic)
-            tw.setItem(z + cur_row, zone * 8 + 3, twivol)
-            tw.setItem(z + cur_row, zone * 8 + 4, twim)
-            tw.setItem(z + cur_row, zone * 8 + 5, twisd)
-            tw.setItem(z + cur_row, zone * 8 + 6, twimed)
-            tw.setItem(z + cur_row, zone * 8 + 7, qt.QTableWidgetItem('%.3g' % Rs[z][zone]))
-            tw.setItem(z + cur_row, zone * 8 + 8, qt.QTableWidgetItem('%.3g' % As[z][zone]))
-            tw.setItem(z + cur_row, zone * 8 + 9, qt.QTableWidgetItem('%.3g' % Ss[z][zone]))
+            tw.setItem(z + cur_row, zone * 9 + 2, twic)
+            tw.setItem(z + cur_row, zone * 9 + 3, twivol)
+            tw.setItem(z + cur_row, zone * 9 + 4, twim)
+            tw.setItem(z + cur_row, zone * 9 + 5, twisd)
+            tw.setItem(z + cur_row, zone * 9 + 6, twimed)
+            tw.setItem(z + cur_row, zone * 9 + 7, qt.QTableWidgetItem('%.3g' % Rs[z][zone]))
+            tw.setItem(z + cur_row, zone * 9 + 8, qt.QTableWidgetItem('%.3g' % As[z][zone]))
+            tw.setItem(z + cur_row, zone * 9 + 9, qt.QTableWidgetItem('%.3g' % Ss[z][zone]))
+            tw.setItem(z + cur_row, zone * 9 + 10, qt.QTableWidgetItem('%d' % slice_counts[z][zone]))
 
     return True
 
