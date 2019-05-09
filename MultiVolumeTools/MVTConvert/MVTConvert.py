@@ -3,6 +3,7 @@ import unittest
 import vtk, qt, ctk, slicer
 from slicer.ScriptedLoadableModule import *
 import logging
+import numpy as np
 
 #
 # MVTConvert
@@ -237,6 +238,7 @@ class MVTConvertLogic(ScriptedLoadableModuleLogic):
     a = slicer.util.array(input_vol.GetName())
     max_y = len(a[0])
     max_x = len(a[0][0])
+    max_z = len(a[0][0][0])
 
     vl = slicer.modules.volumes.logic()
 	
@@ -291,21 +293,38 @@ class MVTConvertLogic(ScriptedLoadableModuleLogic):
     displayNode.SetAndObserveColorNodeID(colorNode.GetID())
     volumeNode.SetAndObserveDisplayNodeID(displayNode.GetID())
     volumeNode.CreateDefaultStorageNode()
-    displayNode.AutoWindowLevelOff()
-    displayNode.SetWindow(200)
-    displayNode.SetLevel(0)
-    displayNode.SetInterpolate(0)
+    if create_label:
+      displayNode.AutoWindowLevelOff()
+      displayNode.SetWindow(200)
+      displayNode.SetLevel(0)
+      displayNode.SetInterpolate(0)
     da = slicer.util.array(volumeNode.GetID())
-    
+   
     offset_frame = 0
     if(to_pad):
       offset_frame = 1
     
+    #for fid in xrange(0, nframes):
+    #  for z in xrange(0, zslices):
+    #    for y in xrange(0, max_y):
+    #      for x in xrange(0, max_x):
+    #        src_index = sframe + fid * finterval
+    #        src_t = src_index // max_z
+    #        src_z = src_index % max_z
+    #        da[z + fid * zslices + offset_frame][y][x] = a[src_t][y][x][src_z]
+
     for fid in xrange(0, nframes):
       for z in xrange(0, zslices):
-        for y in xrange(0, max_y):
-          for x in xrange(0, max_x):
-            da[z + fid * zslices + offset_frame][y][x] = a[0][y][x][sframe + fid * finterval]
+        src_index = sframe + fid * finterval
+        src_t = src_index // max_z
+        src_z = src_index % max_z
+
+        # a has the shape [z][y][x][frame]
+        # we want it to go to [y][x]
+
+        a_tpose = np.transpose(a[src_t])  # a_tpose = [frame][x][y]
+        a_tposeb = np.transpose(a_tpose[src_z]) # a_tposeb = [y][x]
+        da[z + fid * zslices + offset_frame][:][:] = a_tposeb
       
       logging.info('Processed frame %d' % fid)
 	  
