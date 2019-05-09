@@ -95,11 +95,11 @@ class MVTConvertWidget(ScriptedLoadableModuleWidget):
     parametersFormLayout.addRow("Start frame: ", self.sframe)
     
     self.nframes = qt.QLineEdit()
-    self.nframes.text = '40'
+    self.nframes.text = '-1'
     parametersFormLayout.addRow("Number of frames: ", self.nframes)
     
     self.finterval = qt.QLineEdit()
-    self.finterval.text = '5'
+    self.finterval.text = '1'
     parametersFormLayout.addRow("Frame interval: ", self.finterval)
     
     self.zslices = qt.QLineEdit()
@@ -107,7 +107,7 @@ class MVTConvertWidget(ScriptedLoadableModuleWidget):
     parametersFormLayout.addRow("ZSlices per frame: ", self.zslices)
     
     self.pad = qt.QCheckBox()
-    self.pad.setChecked(True)
+    self.pad.setChecked(False)
     parametersFormLayout.addRow("Pad with blank frame: ", self.pad)
     
     self.createLabel = qt.QCheckBox()
@@ -125,9 +125,9 @@ class MVTConvertWidget(ScriptedLoadableModuleWidget):
     #
     # Progress Bar
     #
-    self.progbar = qt.QProgressBar();
-    self.progbar.setValue(0);
-    parametersFormLayout.addRow(self.progbar);
+    self.progbar = qt.QProgressBar()
+    self.progbar.setValue(0)
+    parametersFormLayout.addRow(self.progbar)
 
     # connections
     self.applyButton.connect('clicked(bool)', self.onApplyButton)
@@ -236,9 +236,13 @@ class MVTConvertLogic(ScriptedLoadableModuleLogic):
     logging.info('Processing started')
 
     a = slicer.util.array(input_vol.GetName())
+    max_t = len(a)
     max_y = len(a[0])
     max_x = len(a[0][0])
     max_z = len(a[0][0][0])
+
+    if nframes == -1:
+      nframes = max_t * max_z
 
     vl = slicer.modules.volumes.logic()
 	
