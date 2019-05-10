@@ -278,6 +278,7 @@ class MVTConvertLogic(ScriptedLoadableModuleLogic):
     thresholder.SetInputData(imageData)
     thresholder.SetInValue(0)
     thresholder.SetOutValue(0)
+    thresholder.Update()
     # Create volume node
     volumeNode = output_vol
     #volumeNode=slicer.vtkMRMLScalarVolumeNode()
