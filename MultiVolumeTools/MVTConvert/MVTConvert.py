@@ -274,36 +274,11 @@ class MVTConvertLogic(ScriptedLoadableModuleLogic):
     imageData=vtk.vtkImageData()
     imageData.SetDimensions(imageSize)
     imageData.AllocateScalars(voxelType, 1)
-    thresholder=vtk.vtkImageThreshold()
-    thresholder.SetInputData(imageData)
-    thresholder.SetInValue(0)
-    thresholder.SetOutValue(0)
-    thresholder.Update()
-    # Create volume node
+
     volumeNode = output_vol
-    #volumeNode=slicer.vtkMRMLScalarVolumeNode()
-    #vname = output_vol;
-    #volumeNode.SetName(vname)
-    volumeNode.SetSpacing(imageSpacing)
-    volumeNode.SetOrigin(input_vol.GetOrigin())
-    vm = vtk.vtkMatrix4x4()
-    input_vol.GetIJKToRASDirectionMatrix(vm)
-    volumeNode.SetIJKToRASDirectionMatrix(vm)
-    volumeNode.SetImageDataConnection(thresholder.GetOutputPort())
-    # Add volume to scene
-    #slicer.mrmlScene.AddNode(volumeNode)
-    displayNode=slicer.vtkMRMLScalarVolumeDisplayNode()
-    slicer.mrmlScene.AddNode(displayNode)
-    colorNode = slicer.util.getNode('Grey')
-    displayNode.SetAndObserveColorNodeID(colorNode.GetID())
-    volumeNode.SetAndObserveDisplayNodeID(displayNode.GetID())
-    volumeNode.CreateDefaultStorageNode()
-    if create_label:
-      displayNode.AutoWindowLevelOff()
-      displayNode.SetWindow(200)
-      displayNode.SetLevel(0)
-      displayNode.SetInterpolate(0)
-    da = slicer.util.array(volumeNode.GetID())
+    output_scalars = imageData.GetPointData().GetScalars()
+    da = vtk.util.numpy_support.vtk_to_numpy(output_scalars).reshape(imageSize[::-1])
+    #da = slicer.util.array(volumeNode.GetID())
    
     offset_frame = 0
     if(to_pad):
@@ -338,11 +313,50 @@ class MVTConvertLogic(ScriptedLoadableModuleLogic):
       else:
         pb.setValue((fid + 1) * 100 / nframes)
         slicer.app.processEvents()
+
+    imageData.Modified()
+    
+    # Generate volume node info
+    thresholder=vtk.vtkImageThreshold()
+    thresholder.SetInputData(imageData)
+    #thresholder.SetInValue(0)
+    #thresholder.SetOutValue(0)
+    thresholder.Update()
+    # Create volume node
+    #volumeNode=slicer.vtkMRMLScalarVolumeNode()
+    #vname = output_vol;
+    #volumeNode.SetName(vname)
+    volumeNode.SetSpacing(imageSpacing)
+    volumeNode.SetOrigin(input_vol.GetOrigin())
+    vm = vtk.vtkMatrix4x4()
+    input_vol.GetIJKToRASDirectionMatrix(vm)
+    volumeNode.SetIJKToRASDirectionMatrix(vm)
+    volumeNode.SetImageDataConnection(thresholder.GetOutputPort())
+    # Add volume to scene
+    #slicer.mrmlScene.AddNode(volumeNode)
+    displayNode=slicer.vtkMRMLScalarVolumeDisplayNode()
+    slicer.mrmlScene.AddNode(displayNode)
+    colorNode = slicer.util.getNode('Grey')
+    displayNode.SetAndObserveColorNodeID(colorNode.GetID())
+    volumeNode.SetAndObserveDisplayNodeID(displayNode.GetID())
+    volumeNode.CreateDefaultStorageNode()
+    if create_label:
+      displayNode.AutoWindowLevelOff()
+      displayNode.SetWindow(200)
+      displayNode.SetLevel(0)
+      displayNode.SetInterpolate(0)
+
         
     if(create_label):
       vl.CreateLabelVolume(slicer.mrmlScene, volumeNode, volumeNode.GetName() + '-label')
 
     logging.info('Processing completed')
+
+    # Assign to slice viewers
+    slicer.util.setSliceViewerLayers(background=volumeNode, foreground=None)
+    for sliceViewName in slicer.app.layoutManager().sliceViewNames():
+     sw = slicer.app.layoutManager().sliceWidget(sliceViewName)
+     sw.sliceLogic().FitSliceToAll()
 
     return True
 
