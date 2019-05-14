@@ -416,15 +416,18 @@ class LabelStatisticsPerSliceLogic(ScriptedLoadableModuleLogic):
 
           # find centroid of i,j values
           vidx = numpy.where(lz == t)
-          pin[0] = sum(vidx[0]) / len(vidx[0])
-          pin[1] = sum(vidx[1]) / len(vidx[1])
+          vidx_dims = numpy.shape(vidx)[0]
+
+          pin[1] = sum(vidx[vidx_dims - 2]) / len(vidx[vidx_dims - 2])
+          pin[0] = sum(vidx[vidx_dims - 1]) / len(vidx[vidx_dims - 1])
 
           if whole:
-            pin[2] = sum(vidx[2] / len(vidx[2]))
+            pin[2] = sum(vidx[vidx_dims - 3]) / len(vidx[vidx_dims - 3])
+            print(vidx[vidx_dims - 3])
         else:
           cur_means.append(0)
           cur_sd.append(0)
-        
+
         # Generate RAS coords
         ijk_matrix.MultiplyPoint(pin, pout)
         cur_Rs.append(pout[0])
