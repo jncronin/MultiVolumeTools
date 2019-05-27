@@ -26,6 +26,7 @@ class Histogram(ScriptedLoadableModule):
     self.parent.acknowledgementText = """
     By John Cronin.
 """ # replace with organization, grant and thanks.
+    self.logic = HistogramLogic()
 
 #
 # HistogramWidget
@@ -92,6 +93,10 @@ class HistogramWidget(ScriptedLoadableModuleWidget):
     self.bins.text = '500'
     parametersFormLayout.addRow("Bins: ", self.bins)
 
+    self.byframe_box = qt.QCheckBox()
+    self.byframe_box.setChecked(False)
+    parametersFormLayout.addRow("By Frame: ", self.byframe_box)
+
     #
     # Apply Button
     #
@@ -137,7 +142,7 @@ class HistogramWidget(ScriptedLoadableModuleWidget):
     if qfd.exec_() == qt.QFileDialog.AcceptSave:
       fname = qfd.selectedFiles()[0]      
       logic = HistogramLogic()
-      logic.run(self.inputSelector.currentNode(), self.imask.currentNode(), fname=fname, range=(float(self.range_min.text), float(self.range_max.text)), bins=int(self.bins.text))
+      logic.run(self.inputSelector.currentNode(), self.imask.currentNode(), fname=fname, binrange=(float(self.range_min.text), float(self.range_max.text)), bins=int(self.bins.text), byframe=self.byframe_box.isChecked())
 
 #
 # pig_dynLogic
@@ -153,7 +158,7 @@ class HistogramLogic(ScriptedLoadableModuleLogic):
   https://github.com/Slicer/Slicer/blob/master/Base/Python/slicer/ScriptedLoadableModule.py
   """
 
-  def run(self, input_vol, input_mask, fname = "/tmp/out.csv", range = None, bins = 100):
+  def run(self, input_vol, input_mask, fname = "/tmp/out.csv", binrange = None, bins = 100, byframe = False):
     """
     Run the actual algorithm
     """
@@ -165,28 +170,47 @@ class HistogramLogic(ScriptedLoadableModuleLogic):
     input_shape = list(input_im.GetDimensions())
     input_shape.reverse()
     a = vtk.util.numpy_support.vtk_to_numpy(input_im.GetPointData().GetScalars()).reshape(input_shape)
+    max_z = input_shape[0]
 
-    if(range is None):
-      range = (np.min(a), np.max(a))
+    if(binrange is None):
+      binrange = (np.min(a), np.max(a))
     
     if(input_mask is not None):
       input_imask = input_mask.GetImageData()
       b = vtk.util.numpy_support.vtk_to_numpy(input_imask.GetPointData().GetScalars()).reshape(input_shape)
-      a = a[np.where(b != 0)]
 
-    hist = np.histogram(a, bins=bins, range=range)
-    tot_range = hist[1][len(hist[1])-1] - hist[1][0]
-    bin_width = tot_range / len(hist[0])
-    bin_starts = hist[1][0:len(hist[0])]
-    bin_mids = bin_starts + bin_width / 2
-    bin_ends = bin_starts + bin_width
-    densities = hist[0].astype(float) / np.sum(hist[0])
-
-    f = open(fname, 'w')
+    if byframe:
+      corr_z = [[x] for x in range(0, max_z)]
+    else:
+      corr_z = [range(0, max_z)]
     
-    f.write('bin_start,bin_mid,bin_end,count,density\n')
-    for x in xrange(0, len(hist[0])):
-      f.write('%f,%f,%f,%d,%f\n' % (bin_starts[x], bin_mids[x], bin_ends[x], hist[0][x], densities[x]))
+    f = open(fname, 'w')
+    f.write('frame,bin_start,bin_mid,bin_end,count,density\n')
+
+    for zidx in range(0, len(corr_z)):
+      z = corr_z[zidx]
+
+      cur_a = a[z]
+      
+      if input_mask is not None:
+        cur_b = b[z]
+        cur_a = cur_a[np.where(cur_b != 0)]
+
+      hist = np.histogram(cur_a, bins=bins, range=binrange)
+      tot_range = hist[1][len(hist[1])-1] - hist[1][0]
+      bin_width = tot_range / len(hist[0])
+      bin_starts = hist[1][0:len(hist[0])]
+      bin_mids = bin_starts + bin_width / 2
+      bin_ends = bin_starts + bin_width
+
+      csum = np.sum(hist[0])
+      if csum == 0:
+        densities = np.zeros_like(hist[0])
+      else:
+        densities = hist[0].astype(float) / np.sum(hist[0])
+    
+      for x in xrange(0, len(hist[0])):
+        f.write('%d,%f,%f,%f,%d,%f\n' % (zidx, bin_starts[x], bin_mids[x], bin_ends[x], hist[0][x], densities[x]))
     
     f.close()
 
