@@ -217,7 +217,13 @@ class LabelStatisticsPerSliceWidget(ScriptedLoadableModuleWidget):
     qfd = qt.QFileDialog()
     qfd.windowTitle = 'Save Output As'
     qfd.modal = True
-    qfd.setFilter('Comma-separated values (*.csv)')
+
+    # newer Qt changes filter semantics
+    try:
+      qfd.setFilter('Comma-separated values (*.csv)')
+    except ValueError:
+      qfd.setNameFilter('Comma-separated values (*.csv)')
+    
     qfd.acceptMode = qt.QFileDialog.AcceptSave
     qfd.fileMode = qt.QFileDialog.AnyFile
     qfd.defaultSuffix = 'csv'
