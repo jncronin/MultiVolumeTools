@@ -2,6 +2,7 @@ import os
 import unittest
 import vtk, qt, ctk, slicer
 from slicer.ScriptedLoadableModule import *
+from slicer.util import MRMLNodeNotFoundException
 import logging
 import numpy as np
 
@@ -225,7 +226,14 @@ class AtelectSegmentLogic(ScriptedLoadableModuleLogic):
     # Add volume to scene
     displayNode=slicer.vtkMRMLLabelMapVolumeDisplayNode()
     slicer.mrmlScene.AddNode(displayNode)
-    colorNode = slicer.util.getNode('LungColours')
+
+    # Newer Slicer raises an exception on getNode rather than returning None if the
+    #  node is not found
+    try:
+      colorNode = slicer.util.getNode('LungColours')
+    except MRMLNodeNotFoundException:
+      colorNode = None
+    
     if colorNode is None:
       colorNode = slicer.vtkMRMLColorTableNode()
       colorNode.SetTypeToUser()
