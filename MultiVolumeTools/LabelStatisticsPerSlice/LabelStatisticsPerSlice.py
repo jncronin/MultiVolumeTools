@@ -183,7 +183,10 @@ class LabelStatisticsPerSliceWidget(ScriptedLoadableModuleWidget):
                 [ 'y', 'fam' ] ]
     
     for curorder in myorder:
-      logic.run(slicer.util.getNode(curorder[0]), slicer.util.getNode(curorder[1]), self.progbar, self.tw, self.long.isChecked(), self.whole.isChecked(), int(self.sm.text))
+      try:
+        logic.run(slicer.util.getNode(curorder[0]), slicer.util.getNode(curorder[1]), self.progbar, self.tw, self.long.isChecked(), self.whole.isChecked(), int(self.sm.text))
+      except Exception:
+        pass
 
   def onAll(self):
     logic = LabelStatisticsPerSliceLogic()
