@@ -237,14 +237,14 @@ class LabelStatisticsPerSliceWidget(ScriptedLoadableModuleWidget):
       tw = self.tw
       f = open(fname, 'w')
       
-      for x in xrange(0, tw.columnCount):
+      for x in range(0, tw.columnCount):
         if x != 0:
           f.write(',')
         f.write(tw.horizontalHeaderItem(x).text())
       f.write('\n')
       
-      for y in xrange(0, tw.rowCount):
-        for x in xrange(0, tw.columnCount):
+      for y in range(0, tw.rowCount):
+        for x in range(0, tw.columnCount):
           if x != 0:
             f.write(',')
           twi = tw.item(y,x)
@@ -410,7 +410,7 @@ class LabelStatisticsPerSliceLogic(ScriptedLoadableModuleLogic):
         vz = a[z]
         lz = b[z]
       
-      for t in xrange(1, zones+1):
+      for t in range(1, zones+1):
         vzone = vz[lz == t]
         cur_counts.append(len(vzone))
 
@@ -496,8 +496,8 @@ class LabelStatisticsPerSliceLogic(ScriptedLoadableModuleLogic):
       
         tw.setRowCount(max_z * zones + cur_row)
 
-        for z in xrange(0, len(corr_z)):
-          for zone in xrange(0, zones):
+        for z in range(0, len(corr_z)):
+          for zone in range(0, zones):
             tw.setItem(z * zones + zone + cur_row, 0, qt.QTableWidgetItem(input_vol.GetName()))
             tw.setItem(z * zones + zone + cur_row, 1, qt.QTableWidgetItem(lmap.GetName()))
             tw.setItem(z * zones + zone + cur_row, 2, qt.QTableWidgetItem('%d' % zone))
@@ -534,7 +534,7 @@ class LabelStatisticsPerSliceLogic(ScriptedLoadableModuleLogic):
           headers = []
           headers.append('input_vol')
           headers.append('label_map')
-          for zone in xrange(0, zones):
+          for zone in range(0, zones):
             headers.append('z%d_count' % zone)
             headers.append('z%d_vol' % zone)
             headers.append('z%d_mean' % zone)
@@ -548,12 +548,12 @@ class LabelStatisticsPerSliceLogic(ScriptedLoadableModuleLogic):
         
         tw.setRowCount(max_z + cur_row)      
         
-        for z in xrange(0, len(corr_z)):
+        for z in range(0, len(corr_z)):
           twiv = qt.QTableWidgetItem(input_vol.GetName())
           twlm = qt.QTableWidgetItem(lmap.GetName())
           tw.setItem(z + cur_row, 0, twiv)
           tw.setItem(z + cur_row, 1, twlm)
-          for zone in xrange(0, zones):
+          for zone in range(0, zones):
             twic = qt.QTableWidgetItem('%d' % counts[z][zone])
             twivol = qt.QTableWidgetItem('%.3g' % vols[z][zone])
             twim = qt.QTableWidgetItem('%.3g' % means[z][zone])
