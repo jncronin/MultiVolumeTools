@@ -231,7 +231,7 @@ class StrainCalculatorLogic(ScriptedLoadableModuleLogic):
     for ovd in ovoldata:
       ovol = ovd[0]
 
-      if ovd is not None:
+      if ovol is not None:
         id = vtk.vtkImageData()
         id.SetDimensions(input_ima.GetDimensions())
         id.AllocateScalars(vtk.VTK_FLOAT, 1)
@@ -269,7 +269,6 @@ class StrainCalculatorLogic(ScriptedLoadableModuleLogic):
         displayNode.SetAutoWindowLevel(0)
         displayNode.SetWindow(w)
         displayNode.SetLevel(l)
-
 
         ovol.CreateDefaultStorageNode()
         
