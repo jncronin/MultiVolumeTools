@@ -225,140 +225,54 @@ class StrainCalculatorLogic(ScriptedLoadableModuleLogic):
     vm = vtk.vtkMatrix4x4()
     ivol1.GetIJKToRASDirectionMatrix(vm)
 
-    if ovolx is not None:
-      id = vtk.vtkImageData()
-      id.SetDimensions(input_ima.GetDimensions())
-      id.AllocateScalars(vtk.VTK_FLOAT, 1)
+    # tuples of output volume and data to put in them (prevents code duplication)
+    ovoldata = ( (ovolx, dx[:] - 1), (ovoly, dy[:] - 1), (ovolz, dz[:] - 1), (ovola, dx * dy * dz - 1) )
 
-      osc = id.GetPointData().GetScalars()
-      da = vtk.util.numpy_support.vtk_to_numpy(osc).reshape(input_shapea)
+    for ovd in ovoldata:
+      ovol = ovd[0]
 
-      da[:] = dx[:] - 1
+      if ovd is not None:
+        id = vtk.vtkImageData()
+        id.SetDimensions(input_ima.GetDimensions())
+        id.AllocateScalars(vtk.VTK_FLOAT, 1)
 
-      id.Modified()
-      osc.Modified()
+        osc = id.GetPointData().GetScalars()
+        da = vtk.util.numpy_support.vtk_to_numpy(osc).reshape(input_shapea)
 
-      thresholder = vtk.vtkImageThreshold()
-      thresholder.SetInputData(id)
-      thresholder.Update()
+        da[:] = ovd[1]
 
-      ovolx.SetSpacing(ivol1.GetSpacing())
-      ovolx.SetOrigin(ivol1.GetOrigin())
-      ovolx.SetIJKToRASDirectionMatrix(vm)
+        id.Modified()
+        osc.Modified()
 
-      ovolx.SetImageDataConnection(thresholder.GetOutputPort())
+        thresholder = vtk.vtkImageThreshold()
+        thresholder.SetInputData(id)
+        thresholder.Update()
 
-      colorNode = slicer.util.getNode('Grey')
+        ovol.SetSpacing(ivol1.GetSpacing())
+        ovol.SetOrigin(ivol1.GetOrigin())
+        ovol.SetIJKToRASDirectionMatrix(vm)
 
-      # Add volume to scene
-      displayNode=slicer.vtkMRMLScalarVolumeDisplayNode()
-      slicer.mrmlScene.AddNode(displayNode)
-      displayNode.SetAndObserveColorNodeID(colorNode.GetID())
-      ovolx.SetAndObserveDisplayNodeID(displayNode.GetID())
-      ovolx.CreateDefaultStorageNode()
+        ovol.SetImageDataConnection(thresholder.GetOutputPort())
 
-    if ovoly is not None:
-      id = vtk.vtkImageData()
-      id.SetDimensions(input_ima.GetDimensions())
-      id.AllocateScalars(vtk.VTK_FLOAT, 1)
+        colorNode = slicer.util.getNode('ColdToHotRainbow')
 
-      osc = id.GetPointData().GetScalars()
-      da = vtk.util.numpy_support.vtk_to_numpy(osc).reshape(input_shapea)
+        # window level excluding edges
+        qtiles = np.quantile(da, (0.01, 0.99))
+        w = qtiles[1] - qtiles[0]
+        l = (qtiles[0] + qtiles[1]) / 2
 
-      da[:] = dy[:] - 1
+        # Add volume to scene
+        displayNode=slicer.vtkMRMLScalarVolumeDisplayNode()
+        slicer.mrmlScene.AddNode(displayNode)
+        displayNode.SetAndObserveColorNodeID(colorNode.GetID())
+        ovol.SetAndObserveDisplayNodeID(displayNode.GetID())
+        displayNode.SetAutoWindowLevel(0)
+        displayNode.SetWindow(w)
+        displayNode.SetLevel(l)
 
-      id.Modified()
-      osc.Modified()
 
-      thresholder = vtk.vtkImageThreshold()
-      thresholder.SetInputData(id)
-      thresholder.Update()
-
-      ovoly.SetSpacing(ivol1.GetSpacing())
-      ovoly.SetOrigin(ivol1.GetOrigin())
-      ovoly.SetIJKToRASDirectionMatrix(vm)
-
-      ovoly.SetImageDataConnection(thresholder.GetOutputPort())
-
-      colorNode = slicer.util.getNode('Grey')
-
-      # Add volume to scene
-      displayNode=slicer.vtkMRMLScalarVolumeDisplayNode()
-      slicer.mrmlScene.AddNode(displayNode)
-      displayNode.SetAndObserveColorNodeID(colorNode.GetID())
-      ovoly.SetAndObserveDisplayNodeID(displayNode.GetID())
-      ovoly.CreateDefaultStorageNode()    
-    logging.info('Processing completed')
-    if pb is None:
-      pass
-    else:
-      pb.setValue(100)
-      slicer.app.processEvents()
-
-    if ovolz is not None:
-      id = vtk.vtkImageData()
-      id.SetDimensions(input_ima.GetDimensions())
-      id.AllocateScalars(vtk.VTK_FLOAT, 1)
-
-      osc = id.GetPointData().GetScalars()
-      da = vtk.util.numpy_support.vtk_to_numpy(osc).reshape(input_shapea)
-
-      da[:] = dz[:] - 1
-
-      id.Modified()
-      osc.Modified()
-
-      thresholder = vtk.vtkImageThreshold()
-      thresholder.SetInputData(id)
-      thresholder.Update()
-
-      ovolz.SetSpacing(ivol1.GetSpacing())
-      ovolz.SetOrigin(ivol1.GetOrigin())
-      ovolz.SetIJKToRASDirectionMatrix(vm)
-
-      ovolz.SetImageDataConnection(thresholder.GetOutputPort())
-
-      colorNode = slicer.util.getNode('Grey')
-
-      # Add volume to scene
-      displayNode=slicer.vtkMRMLScalarVolumeDisplayNode()
-      slicer.mrmlScene.AddNode(displayNode)
-      displayNode.SetAndObserveColorNodeID(colorNode.GetID())
-      ovolz.SetAndObserveDisplayNodeID(displayNode.GetID())
-      ovolz.CreateDefaultStorageNode()
-
-    if ovola is not None:
-      id = vtk.vtkImageData()
-      id.SetDimensions(input_ima.GetDimensions())
-      id.AllocateScalars(vtk.VTK_FLOAT, 1)
-
-      osc = id.GetPointData().GetScalars()
-      da = vtk.util.numpy_support.vtk_to_numpy(osc).reshape(input_shapea)
-
-      da[:] = dx * dy * dz - 1
-
-      id.Modified()
-      osc.Modified()
-
-      thresholder = vtk.vtkImageThreshold()
-      thresholder.SetInputData(id)
-      thresholder.Update()
-
-      ovola.SetSpacing(ivol1.GetSpacing())
-      ovola.SetOrigin(ivol1.GetOrigin())
-      ovola.SetIJKToRASDirectionMatrix(vm)
-
-      ovola.SetImageDataConnection(thresholder.GetOutputPort())
-
-      colorNode = slicer.util.getNode('Grey')
-
-      # Add volume to scene
-      displayNode=slicer.vtkMRMLScalarVolumeDisplayNode()
-      slicer.mrmlScene.AddNode(displayNode)
-      displayNode.SetAndObserveColorNodeID(colorNode.GetID())
-      ovola.SetAndObserveDisplayNodeID(displayNode.GetID())
-      ovola.CreateDefaultStorageNode()
-          
+        ovol.CreateDefaultStorageNode()
+        
     return True
 
 
