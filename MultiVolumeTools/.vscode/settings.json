@@ -2,6 +2,12 @@
     "python.linting.pylintEnabled": false,
     "python.analysis.extraPaths": [
         "C:\\d\\S4\\Base\\Python",
-        "app"
+        "app",
+        "C:/Users/jncro/AppData/Local/NA-MIC/Slicer 4.11.20200930/bin/Python/slicer",
+        "C:\\Users\\jncro\\AppData\\Local\\NA-MIC\\Slicer 4.11.20200930\\lib\\Slicer-4.11",
+        "C:\\Users\\jncro\\AppData\\Local\\NA-MIC\\Slicer 4.11.20200930\\lib\\Slicer-4.11\\qt-scripted-modules",
+        "C:\\Users\\jncro\\AppData\\Local\\NA-MIC\\Slicer 4.11.20200930\\lib\\Slicer-4.11\\qt-loadable-modules",
+        "C:/Users/jncro/AppData/Local/NA-MIC/Slicer 4.11.20200930/bin/Lib/site-packages",
+        "C:/Users/jncro/AppData/Local/NA-MIC/Slicer 4.11.20200930/bin/Lib/site-packages/vtkmodules"
     ]
 }
