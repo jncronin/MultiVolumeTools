@@ -209,9 +209,17 @@ class StrainCalculatorLogic(ScriptedLoadableModuleLogic):
     by = b[:,:,:,1]
     bz = b[:,:,:,2]
 
-    dx = ax-bx
-    dy = ay-by
-    dz = az-bz
+    axd = np.diff(ax, axis=2, append=0)
+    ayd = np.diff(ay, axis=1, append=0)
+    azd = np.diff(az, axis=0, append=0)
+    bxd = np.diff(bx, axis=2, append=0)
+    byd = np.diff(by, axis=1, append=0)
+    bzd = np.diff(bz, axis=0, append=0)
+
+
+    dx = axd/bxd
+    dy = ayd/byd
+    dz = azd/bzd
 
     # set to output
     vm = vtk.vtkMatrix4x4()
@@ -225,7 +233,7 @@ class StrainCalculatorLogic(ScriptedLoadableModuleLogic):
       osc = id.GetPointData().GetScalars()
       da = vtk.util.numpy_support.vtk_to_numpy(osc).reshape(input_shapea)
 
-      da[:] = dx[:]
+      da[:] = dx[:] - 1
 
       id.Modified()
       osc.Modified()
@@ -257,7 +265,7 @@ class StrainCalculatorLogic(ScriptedLoadableModuleLogic):
       osc = id.GetPointData().GetScalars()
       da = vtk.util.numpy_support.vtk_to_numpy(osc).reshape(input_shapea)
 
-      da[:] = dy[:]
+      da[:] = dy[:] - 1
 
       id.Modified()
       osc.Modified()
@@ -295,7 +303,7 @@ class StrainCalculatorLogic(ScriptedLoadableModuleLogic):
       osc = id.GetPointData().GetScalars()
       da = vtk.util.numpy_support.vtk_to_numpy(osc).reshape(input_shapea)
 
-      da[:] = dz[:]
+      da[:] = dz[:] - 1
 
       id.Modified()
       osc.Modified()
@@ -327,7 +335,7 @@ class StrainCalculatorLogic(ScriptedLoadableModuleLogic):
       osc = id.GetPointData().GetScalars()
       da = vtk.util.numpy_support.vtk_to_numpy(osc).reshape(input_shapea)
 
-      da[:] = np.sqrt(dx*dx + dy*dy + dz*dz)[:]
+      da[:] = dx * dy * dz - 1
 
       id.Modified()
       osc.Modified()
