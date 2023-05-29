@@ -84,52 +84,66 @@ class StrainCalculatorWidget(ScriptedLoadableModuleWidget):
     self.ovolx.selectNodeUponCreation = True
     self.ovolx.addEnabled = True
     self.ovolx.removeEnabled = False
-    self.ovolx.noneEnabled = False
+    self.ovolx.noneEnabled = True
     self.ovolx.renameEnabled = True
     self.ovolx.showHidden = False
     self.ovolx.showChildNodeTypes = False
     self.ovolx.setMRMLScene( slicer.mrmlScene )
     self.ovolx.setToolTip( "Pick the output to the algorithm." )
-    parametersFormLayout.addRow("Output x Volume: ", self.ovolx)
+    parametersFormLayout.addRow("Output RL Strain Volume: ", self.ovolx)
 
     self.ovoly = slicer.qMRMLNodeComboBox()
     self.ovoly.nodeTypes = ["vtkMRMLScalarVolumeNode"]
     self.ovoly.selectNodeUponCreation = True
     self.ovoly.addEnabled = True
     self.ovoly.removeEnabled = False
-    self.ovoly.noneEnabled = False
+    self.ovoly.noneEnabled = True
     self.ovoly.renameEnabled = True
     self.ovoly.showHidden = False
     self.ovoly.showChildNodeTypes = False
     self.ovoly.setMRMLScene( slicer.mrmlScene )
     self.ovoly.setToolTip( "Pick the output to the algorithm." )
-    parametersFormLayout.addRow("Output y Volume: ", self.ovoly)
+    parametersFormLayout.addRow("Output AP Strain Volume: ", self.ovoly)
 
     self.ovolz = slicer.qMRMLNodeComboBox()
     self.ovolz.nodeTypes = ["vtkMRMLScalarVolumeNode"]
     self.ovolz.selectNodeUponCreation = True
     self.ovolz.addEnabled = True
     self.ovolz.removeEnabled = False
-    self.ovolz.noneEnabled = False
+    self.ovolz.noneEnabled = True
     self.ovolz.renameEnabled = True
     self.ovolz.showHidden = False
     self.ovolz.showChildNodeTypes = False
     self.ovolz.setMRMLScene( slicer.mrmlScene )
     self.ovolz.setToolTip( "Pick the output to the algorithm." )
-    parametersFormLayout.addRow("Output z Volume: ", self.ovolz)
+    parametersFormLayout.addRow("Output IS Strain Volume: ", self.ovolz)
 
     self.ovola = slicer.qMRMLNodeComboBox()
     self.ovola.nodeTypes = ["vtkMRMLScalarVolumeNode"]
     self.ovola.selectNodeUponCreation = True
     self.ovola.addEnabled = True
     self.ovola.removeEnabled = False
-    self.ovola.noneEnabled = False
+    self.ovola.noneEnabled = True
     self.ovola.renameEnabled = True
     self.ovola.showHidden = False
     self.ovola.showChildNodeTypes = False
     self.ovola.setMRMLScene( slicer.mrmlScene )
     self.ovola.setToolTip( "Pick the output to the algorithm." )
-    parametersFormLayout.addRow("Output absolute Volume: ", self.ovola)
+    parametersFormLayout.addRow("Output Volumetric Strain Volume: ", self.ovola)
+
+    self.ovolaa = slicer.qMRMLNodeComboBox()
+    self.ovolaa.nodeTypes = ["vtkMRMLScalarVolumeNode"]
+    self.ovolaa.selectNodeUponCreation = True
+    self.ovolaa.addEnabled = True
+    self.ovolaa.removeEnabled = False
+    self.ovolaa.noneEnabled = True
+    self.ovolaa.renameEnabled = True
+    self.ovolaa.showHidden = False
+    self.ovolaa.showChildNodeTypes = False
+    self.ovolaa.setMRMLScene( slicer.mrmlScene )
+    self.ovolaa.setToolTip( "Pick the output to the algorithm." )
+    parametersFormLayout.addRow("Output Absolute Volumetric Strain Volume: ", self.ovolaa)
+
     #
     # Apply Button
     #
@@ -141,9 +155,9 @@ class StrainCalculatorWidget(ScriptedLoadableModuleWidget):
     #
     # Progress Bar
     #
-    self.progbar = qt.QProgressBar();
-    self.progbar.setValue(0);
-    parametersFormLayout.addRow(self.progbar);
+    self.progbar = qt.QProgressBar()
+    self.progbar.setValue(0)
+    parametersFormLayout.addRow(self.progbar)
 
     # connections
     self.applyButton.connect('clicked(bool)', self.onApplyButton)
@@ -153,6 +167,7 @@ class StrainCalculatorWidget(ScriptedLoadableModuleWidget):
     self.ovoly.connect("currentNodeChanged(vtkMRMLNode*)", self.onSelect)
     self.ovolz.connect("currentNodeChanged(vtkMRMLNode*)", self.onSelect)
     self.ovola.connect("currentNodeChanged(vtkMRMLNode*)", self.onSelect)
+    self.ovolaa.connect("currentNodeChanged(vtkMRMLNode*)", self.onSelect)
 
     # Add vertical spacer
     self.layout.addStretch(1)
@@ -164,11 +179,19 @@ class StrainCalculatorWidget(ScriptedLoadableModuleWidget):
     pass
 
   def onSelect(self):
-    self.applyButton.enabled = (self.inputSelector.currentNode() is not None) & (self.inputSelector2 is not None) & ((self.ovola.currentNode() is not None) | (self.ovolx.currentNode() is not None) | (self.ovoly.currentNode() is not None) | (self.ovolz.currentNode() is not None))
+    self.applyButton.enabled = (self.inputSelector.currentNode() is not None) & \
+      (self.inputSelector2 is not None) & \
+        ((self.ovola.currentNode() is not None) | \
+          (self.ovolx.currentNode() is not None) | \
+            (self.ovoly.currentNode() is not None) | \
+              (self.ovolz.currentNode() is not None) | \
+                (self.ovolaa.currentNode() is not None))
 
   def onApplyButton(self):
     logic = StrainCalculatorLogic()
-    logic.run(self.inputSelector.currentNode(), self.inputSelector2.currentNode(), self.ovolx.currentNode(), self.ovoly.currentNode(), self.ovolz.currentNode(), self.ovola.currentNode(), self.progbar)
+    logic.run(self.inputSelector.currentNode(), self.inputSelector2.currentNode(), self.ovolx.currentNode(), \
+      self.ovoly.currentNode(), self.ovolz.currentNode(), self.ovola.currentNode(), self.ovolaa.currentNode(), \
+        self.progbar)
 
 #
 # pig_dynLogic
@@ -184,7 +207,7 @@ class StrainCalculatorLogic(ScriptedLoadableModuleLogic):
   https://github.com/Slicer/Slicer/blob/master/Base/Python/slicer/ScriptedLoadableModule.py
   """
 
-  def run(self, ivol1, ivol2, ovolx, ovoly, ovolz, ovola, pb = None):
+  def run(self, ivol1, ivol2, ovolx, ovoly, ovolz, ovola, ovolaa, pb = None):
     """
     Run the actual algorithm
     """
@@ -226,7 +249,12 @@ class StrainCalculatorLogic(ScriptedLoadableModuleLogic):
     ivol1.GetIJKToRASDirectionMatrix(vm)
 
     # tuples of output volume and data to put in them (prevents code duplication)
-    ovoldata = ( (ovolx, dx[:] - 1), (ovoly, dy[:] - 1), (ovolz, dz[:] - 1), (ovola, dx * dy * dz - 1) )
+    ovoldata = ( \
+      (ovolx, dx[:] - 1), \
+        (ovoly, dy[:] - 1), \
+          (ovolz, dz[:] - 1), \
+            (ovola, dx * dy * dz - 1), \
+              (ovolaa, np.absolute(dx * dy * dz - 1)))
 
     for ovd in ovoldata:
       ovol = ovd[0]
